@@ -9,6 +9,13 @@ export const clickableMeshes = new Map(); // mesh → { name, radius, color }
 
 const textureLoader = new THREE.TextureLoader();
 
+/** Load a texture with correct sRGB color space for color maps */
+function loadTex(path) {
+  const tex = textureLoader.load(path);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 // ============================================================================
 // STAR FIELD
 // ============================================================================
@@ -52,9 +59,16 @@ export function createStarField(scene) {
 // SUN
 // ============================================================================
 export function createSun(scene) {
-  const geo = new THREE.SphereGeometry(4, 32, 32);
-  const sunTex = textureLoader.load('/textures/sun.jpg');
-  const mat = new THREE.MeshBasicMaterial({ map: sunTex });
+  const geo = new THREE.SphereGeometry(4, 64, 64);
+  const sunTex = loadTex('/textures/sun.jpg');
+  const mat = new THREE.MeshStandardMaterial({
+    map: sunTex,
+    emissiveMap: sunTex,
+    emissive: new THREE.Color(0xffcc44),
+    emissiveIntensity: 1.5,
+    roughness: 1,
+    metalness: 0,
+  });
   const sunMesh = new THREE.Mesh(geo, mat);
   scene.add(sunMesh);
 
@@ -99,18 +113,19 @@ export function createPlanet(scene, data) {
   scene.add(orbitPivot);
 
   // Planet mesh
-  const geo = new THREE.SphereGeometry(data.radius, 32, 32);
+  const geo = new THREE.SphereGeometry(data.radius, 64, 64);
   const matOpts = {
-    color: data.color,
-    emissive: data.emissive || 0x000000,
-    shininess: 25,
-    specular: 0x222222,
+    roughness: 0.85,
+    metalness: 0.0,
+    emissive: new THREE.Color(data.emissive || 0x000000),
+    emissiveIntensity: 0.08,
   };
   if (data.texture) {
-    matOpts.map = textureLoader.load(data.texture);
-    matOpts.color = 0xffffff; // let texture provide color
+    matOpts.map = loadTex(data.texture);
+  } else {
+    matOpts.color = data.color;
   }
-  const mat = new THREE.MeshPhongMaterial(matOpts);
+  const mat = new THREE.MeshStandardMaterial(matOpts);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.x = data.distance;
   mesh.castShadow = true;
@@ -144,13 +159,19 @@ export function createPlanet(scene, data) {
       moonPivot.position.x = data.distance;
       orbitPivot.add(moonPivot);
 
-      const mGeo = new THREE.SphereGeometry(md.radius, 16, 16);
-      const mMatOpts = { color: md.color, emissive: 0x111111, shininess: 10 };
+      const mGeo = new THREE.SphereGeometry(md.radius, 32, 32);
+      const mMatOpts = {
+        roughness: 0.9,
+        metalness: 0.0,
+        emissive: new THREE.Color(0x111111),
+        emissiveIntensity: 0.08,
+      };
       if (md.texture) {
-        mMatOpts.map = textureLoader.load(md.texture);
-        mMatOpts.color = 0xffffff;
+        mMatOpts.map = loadTex(md.texture);
+      } else {
+        mMatOpts.color = md.color;
       }
-      const mMat = new THREE.MeshPhongMaterial(mMatOpts);
+      const mMat = new THREE.MeshStandardMaterial(mMatOpts);
       const mMesh = new THREE.Mesh(mGeo, mMat);
       mMesh.position.x = md.distance;
       moonPivot.add(mMesh);

@@ -55,6 +55,9 @@ function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setAnimationLoop(animate);
@@ -74,12 +77,13 @@ function init() {
   controls.enablePan = true;
 
   // Lights
-  sunLight = new THREE.PointLight(0xffffff, 2.5, 500, 0.5);
+  sunLight = new THREE.PointLight(0xffffff, 3.0, 500, 0.5);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 1024;
   sunLight.shadow.mapSize.height = 1024;
   scene.add(sunLight);
-  scene.add(new THREE.AmbientLight(0x222233, 0.3));
+  scene.add(new THREE.AmbientLight(0x333344, 0.6));
+  scene.add(new THREE.HemisphereLight(0x4466aa, 0x222211, 0.3));
 
   // Build solar system
   createStarField(scene);
@@ -211,9 +215,9 @@ function animate() {
   // Axial rotation (visual only, independent of ephemeris)
   planetObjects.forEach((p) => {
     if (speedMode === 'realtime') {
-      p.mesh.rotation.y += p.data.rotationSpeed * delta * 60;
+      p.mesh.rotation.y += p.data.rotationSpeed * delta * 8;
     } else {
-      p.mesh.rotation.y += p.data.rotationSpeed * speedMultiplier * delta * 60;
+      p.mesh.rotation.y += p.data.rotationSpeed * speedMultiplier * delta * 8;
     }
     // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
@@ -229,10 +233,10 @@ function animate() {
   });
 
   // Sun
-  sunObj.mesh.rotation.y += 0.1 * delta;
+  sunObj.mesh.rotation.y += 0.02 * delta;
   const pulse = 1 + Math.sin(clock.elapsedTime * 2) * 0.05;
   sunObj.glow.scale.set(20 * pulse, 20 * pulse, 1);
-  sunLight.intensity = 2.5 + Math.sin(clock.elapsedTime * 3) * 0.2;
+  sunLight.intensity = 3.0 + Math.sin(clock.elapsedTime * 3) * 0.3;
 
   // Asteroid belt slow rotation
   if (asteroidBelt) {
