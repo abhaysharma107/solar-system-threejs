@@ -13,6 +13,7 @@ import { PLANETS } from './data/planets.js';
 import { getAllPositions } from './physics/ephemeris.js';
 import {
   createStarField, createSun, createPlanet, createAsteroidBelt, clickableMeshes,
+  orbitLines,
 } from './objects/factories.js';
 import {
   smoothCameraTo, updateCamera, DEFAULT_CAM_POS, DEFAULT_CAM_TARGET,
@@ -97,7 +98,7 @@ function init() {
   applyEphemeris(new Date());
 
   // UI
-  setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera, setSimDateFn: setSimDate });
+  setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera, setSimDateFn: setSimDate, toggleOrbitsFn: toggleOrbits });
 
   // Click
   renderer.domElement.addEventListener('click', onCanvasClick);
@@ -192,6 +193,12 @@ function setSimDate(date) {
   applyEphemeris(simDate);
 }
 
+function toggleOrbits() {
+  const visible = orbitLines.length > 0 ? !orbitLines[0].visible : false;
+  orbitLines.forEach((line) => { line.visible = visible; });
+  return visible;
+}
+
 // ============================================================================
 // ANIMATION LOOP
 // ============================================================================
@@ -213,21 +220,25 @@ function animate() {
   applyEphemeris(simDate);
 
   // Axial rotation (visual only, independent of ephemeris)
+  // rotationPeriod is in Earth days; angular vel = 2π / |period| rad/day
   planetObjects.forEach((p) => {
+    const period = p.data.rotationPeriod || 1;
+    const radPerDay = (2 * Math.PI) / Math.abs(period);
+    const sign = period < 0 ? -1 : 1;
     if (speedMode === 'realtime') {
-      p.mesh.rotation.y += p.data.rotationSpeed * delta * 8;
+      // 1 real sec = 1 sim sec = 1/86400 day
+      p.mesh.rotation.y += sign * radPerDay * (delta / 86400);
     } else {
-      p.mesh.rotation.y += p.data.rotationSpeed * speedMultiplier * delta * 8;
+      // Artistic: speedMultiplier * 100 sim-days per real sec
+      p.mesh.rotation.y += sign * radPerDay * speedMultiplier * 100 * delta;
     }
     // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
-      const radPerDay = (2 * Math.PI) / m.data.orbitalPeriod;
+      const moonRadPerDay = (2 * Math.PI) / m.data.orbitalPeriod;
       if (speedMode === 'realtime') {
-        // 1 real sec = 1 sim sec = 1/86400 day
-        m.pivot.rotation.y += radPerDay * (delta / 86400);
+        m.pivot.rotation.y += moonRadPerDay * (delta / 86400);
       } else {
-        // Artistic: speedMultiplier * 100 sim-days per real sec
-        m.pivot.rotation.y += radPerDay * speedMultiplier * 100 * delta;
+        m.pivot.rotation.y += moonRadPerDay * speedMultiplier * 100 * delta;
       }
     });
   });
@@ -235,7 +246,7 @@ function animate() {
   // Sun
   sunObj.mesh.rotation.y += 0.02 * delta;
   const pulse = 1 + Math.sin(clock.elapsedTime * 2) * 0.05;
-  sunObj.glow.scale.set(20 * pulse, 20 * pulse, 1);
+  sunObj.glow.scale.set(28 * pulse, 28 * pulse, 1);
   sunLight.intensity = 3.0 + Math.sin(clock.elapsedTime * 3) * 0.3;
 
   // Asteroid belt slow rotation

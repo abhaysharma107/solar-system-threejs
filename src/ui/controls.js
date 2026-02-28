@@ -16,7 +16,7 @@ export function setSpeedMode(m) { speedMode = m; }
  * Wire up all UI event listeners.
  * @param {Object} deps — { focusBodyFn, resetCameraFn, setSimDateFn }
  */
-export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn }) {
+export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn, toggleOrbitsFn }) {
   // Speed buttons
   document.querySelectorAll('[data-speed]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -48,6 +48,15 @@ export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn }) {
 
   // Reset
   document.getElementById('btn-reset')?.addEventListener('click', resetCameraFn);
+
+  // Orbit toggle
+  const orbitsBtn = document.getElementById('btn-orbits');
+  if (orbitsBtn && toggleOrbitsFn) {
+    orbitsBtn.addEventListener('click', () => {
+      const visible = toggleOrbitsFn();
+      orbitsBtn.classList.toggle('active', visible);
+    });
+  }
 
   // ── Date controls ──
   const datePicker = document.getElementById('date-picker');

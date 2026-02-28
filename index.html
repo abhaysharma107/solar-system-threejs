@@ -230,10 +230,8 @@
       }
       #sim-badge span { color: #665; margin-right: 4px; }
 
-      /* ── Reset button ── */
-      #btn-reset {
-        width: 100%;
-        margin-top: 6px;
+      /* ── Reset / Orbits buttons ── */
+      #btn-reset, #btn-orbits {
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.1);
         color: #778;
@@ -244,9 +242,14 @@
         transition: all 0.2s;
         text-align: center;
       }
-      #btn-reset:hover {
+      #btn-reset:hover, #btn-orbits:hover {
         background: rgba(255,255,255,0.1);
         color: #fff;
+      }
+      #btn-orbits.active {
+        background: rgba(255,200,50,0.15);
+        border-color: rgba(255,200,50,0.3);
+        color: #ddb840;
       }
 
       /* ── Bottom hint ── */
@@ -317,7 +320,10 @@
       </div>
 
       <!-- Reset Camera -->
-      <button id="btn-reset">↺ Reset Camera</button>
+      <div class="btn-row" style="margin-top: 6px;">
+        <button id="btn-orbits" class="btn active" style="flex:1">⊙ Orbits</button>
+        <button id="btn-reset" style="flex:1">↺ Reset Camera</button>
+      </div>
     </div>
 
     <!-- Info Panel (slides in from right on planet click) -->

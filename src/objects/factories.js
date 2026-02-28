@@ -4,15 +4,24 @@
 
 import * as THREE from 'three';
 
-// ── Shared registries (exported for main to access) ──
+// ── Shared registries ──
 export const clickableMeshes = new Map(); // mesh → { name, radius, color }
+export const orbitLines = [];             // all orbit line objects for toggling
 
 const textureLoader = new THREE.TextureLoader();
 
-/** Load a texture with correct sRGB color space for color maps */
+/** Load a texture with correct sRGB color space for color / diffuse maps */
 function loadTex(path) {
   const tex = textureLoader.load(path);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/** Load a texture WITHOUT sRGB (for alpha / data textures) */
+function loadTexLinear(path) {
+  const tex = textureLoader.load(path);
+  tex.anisotropy = 8;
   return tex;
 }
 
@@ -20,39 +29,81 @@ function loadTex(path) {
 // STAR FIELD
 // ============================================================================
 export function createStarField(scene) {
-  const starCount = 2500;
-  const positions = new Float32Array(starCount * 3);
-  const colors = new Float32Array(starCount * 3);
+  const layers = [
+    { count: 4000, minR: 300, maxR: 600, size: 0.4, opacity: 0.5 },
+    { count: 2000, minR: 280, maxR: 550, size: 0.8, opacity: 0.8 },
+    { count: 600,  minR: 280, maxR: 500, size: 1.5, opacity: 1.0 },
+  ];
 
-  for (let i = 0; i < starCount; i++) {
-    const r = 300 + Math.random() * 300;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+  const group = new THREE.Group();
+  group.name = 'starField';
 
-    const temp = 0.7 + Math.random() * 0.3;
-    colors[i * 3]     = temp;
-    colors[i * 3 + 1] = temp;
-    colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;
-  }
+  layers.forEach(({ count, minR, maxR, size, opacity }) => {
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
 
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    for (let i = 0; i < count; i++) {
+      const r = minR + Math.random() * (maxR - minR);
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
 
-  const mat = new THREE.PointsMaterial({
-    size: 0.8,
-    vertexColors: true,
-    transparent: true,
-    opacity: 0.9,
-    sizeAttenuation: true,
+      const temp = Math.random();
+      if (temp < 0.15) {
+        colors[i * 3] = 0.6 + Math.random() * 0.2;
+        colors[i * 3 + 1] = 0.7 + Math.random() * 0.2;
+        colors[i * 3 + 2] = 1.0;
+      } else if (temp > 0.85) {
+        colors[i * 3] = 1.0;
+        colors[i * 3 + 1] = 0.6 + Math.random() * 0.3;
+        colors[i * 3 + 2] = 0.3 + Math.random() * 0.3;
+      } else {
+        const w = 0.8 + Math.random() * 0.2;
+        colors[i * 3] = w;
+        colors[i * 3 + 1] = w;
+        colors[i * 3 + 2] = w;
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial({
+      size, vertexColors: true, transparent: true, opacity,
+      sizeAttenuation: true, depthWrite: false,
+    });
+    group.add(new THREE.Points(geo, mat));
   });
 
-  const stars = new THREE.Points(geo, mat);
-  scene.add(stars);
-  return stars;
+  // Milky Way band
+  const bandCount = 3000;
+  const bandPos = new Float32Array(bandCount * 3);
+  const bandCol = new Float32Array(bandCount * 3);
+  for (let i = 0; i < bandCount; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 350 + Math.random() * 200;
+    const y = (Math.random() - 0.5) * 40 * Math.exp(-Math.random() * 2);
+    bandPos[i * 3]     = Math.cos(a) * r;
+    bandPos[i * 3 + 1] = y;
+    bandPos[i * 3 + 2] = Math.sin(a) * r;
+    const b = 0.3 + Math.random() * 0.2;
+    bandCol[i * 3]     = b * 1.2;
+    bandCol[i * 3 + 1] = b;
+    bandCol[i * 3 + 2] = b * 0.8;
+  }
+  const bandGeo = new THREE.BufferGeometry();
+  bandGeo.setAttribute('position', new THREE.BufferAttribute(bandPos, 3));
+  bandGeo.setAttribute('color', new THREE.BufferAttribute(bandCol, 3));
+  const bandMat = new THREE.PointsMaterial({
+    size: 2.5, vertexColors: true, transparent: true, opacity: 0.15,
+    sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  group.add(new THREE.Points(bandGeo, bandMat));
+
+  scene.add(group);
+  return group;
 }
 
 // ============================================================================
@@ -72,24 +123,26 @@ export function createSun(scene) {
   const sunMesh = new THREE.Mesh(geo, mat);
   scene.add(sunMesh);
 
-  // Glow sprite
+  // Glow sprite — larger, softer
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 256;
+  canvas.width = canvas.height = 512;
   const ctx = canvas.getContext('2d');
-  const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-  grad.addColorStop(0, 'rgba(255,220,80,0.8)');
-  grad.addColorStop(0.3, 'rgba(255,180,40,0.4)');
-  grad.addColorStop(0.6, 'rgba(255,120,20,0.15)');
-  grad.addColorStop(1, 'rgba(255,80,0,0)');
+  const grad = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+  grad.addColorStop(0, 'rgba(255,230,100,0.9)');
+  grad.addColorStop(0.15, 'rgba(255,200,60,0.6)');
+  grad.addColorStop(0.3, 'rgba(255,160,40,0.3)');
+  grad.addColorStop(0.5, 'rgba(255,120,20,0.12)');
+  grad.addColorStop(0.7, 'rgba(255,80,10,0.04)');
+  grad.addColorStop(1, 'rgba(255,60,0,0)');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 256, 256);
+  ctx.fillRect(0, 0, 512, 512);
 
   const glowTex = new THREE.CanvasTexture(canvas);
   const glowMat = new THREE.SpriteMaterial({
     map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   });
   const glow = new THREE.Sprite(glowMat);
-  glow.scale.set(20, 20, 1);
+  glow.scale.set(28, 28, 1);
   scene.add(glow);
 
   // Click registration
@@ -133,6 +186,26 @@ export function createPlanet(scene, data) {
   if (data.tilt) mesh.rotation.z = data.tilt;
   orbitPivot.add(mesh);
 
+  // Atmosphere shell
+  if (data.atmosphere) {
+    const atmoGeo = new THREE.SphereGeometry(
+      data.radius * data.atmosphere.scale, 64, 64
+    );
+    const atmoMat = new THREE.MeshStandardMaterial({
+      color: data.atmosphere.color,
+      transparent: true,
+      opacity: data.atmosphere.opacity,
+      roughness: 1,
+      metalness: 0,
+      side: THREE.FrontSide,
+      depthWrite: false,
+    });
+    const atmo = new THREE.Mesh(atmoGeo, atmoMat);
+    atmo.position.x = data.distance;
+    if (data.tilt) atmo.rotation.z = data.tilt;
+    orbitPivot.add(atmo);
+  }
+
   // Label
   const label = createLabel(data.name, data.color);
   label.position.set(data.distance, data.radius + 1.5, 0);
@@ -141,6 +214,7 @@ export function createPlanet(scene, data) {
   // Orbit line
   const orbitLine = createOrbitLine(data.distance, data.orbitColor || 0x444444);
   scene.add(orbitLine);
+  orbitLines.push(orbitLine);
 
   // Rings
   if (data.hasRing) {
@@ -194,14 +268,20 @@ export function createPlanet(scene, data) {
 // ORBIT LINE
 // ============================================================================
 function createOrbitLine(radius, color) {
-  const segs = 128;
+  const segs = 256;
   const pts = [];
   for (let i = 0; i <= segs; i++) {
     const a = (i / segs) * Math.PI * 2;
     pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
   }
   const geo = new THREE.BufferGeometry().setFromPoints(pts);
-  const mat = new THREE.LineDashedMaterial({ color, dashSize: 1, gapSize: 0.5, transparent: true, opacity: 0.4 });
+  const mat = new THREE.LineDashedMaterial({
+    color,
+    dashSize: 0.8,
+    gapSize: 0.4,
+    transparent: true,
+    opacity: 0.3,
+  });
   const line = new THREE.Line(geo, mat);
   line.computeLineDistances();
   return line;
@@ -211,38 +291,66 @@ function createOrbitLine(radius, color) {
 // RING
 // ============================================================================
 function createRing(data) {
-  const geo = new THREE.RingGeometry(data.ringInner, data.ringOuter, 64);
+  const segments = 128;
+  const geo = new THREE.RingGeometry(data.ringInner, data.ringOuter, segments);
+
+  // Remap UVs: U goes from 0 (inner) to 1 (outer) radially
   const pos = geo.attributes.position;
   const uv = geo.attributes.uv;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i);
+    const x = pos.getX(i);
+    const y = pos.getY(i);
     const dist = Math.sqrt(x * x + y * y);
-    uv.setXY(i, (dist - data.ringInner) / (data.ringOuter - data.ringInner), 0.5);
+    const t = (dist - data.ringInner) / (data.ringOuter - data.ringInner);
+    uv.setXY(i, t, 0.5);
   }
 
-  let tex;
+  let mat;
   if (data.ringTexture) {
-    // Use real ring texture (e.g. Saturn)
-    tex = textureLoader.load(data.ringTexture);
-    tex.rotation = Math.PI / 2;
+    // Saturn: ring alpha PNG is a horizontal strip, X = radial distance
+    const colorTex = loadTex(data.ringTexture);
+    colorTex.wrapS = THREE.ClampToEdgeWrapping;
+    colorTex.wrapT = THREE.ClampToEdgeWrapping;
+    const alphaTex = loadTexLinear(data.ringTexture);
+    alphaTex.wrapS = THREE.ClampToEdgeWrapping;
+    alphaTex.wrapT = THREE.ClampToEdgeWrapping;
+
+    mat = new THREE.MeshBasicMaterial({
+      map: colorTex,
+      alphaMap: alphaTex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: data.ringOpacity,
+      depthWrite: false,
+    });
   } else {
-    // Procedural ring
+    // Procedural ring for Jupiter / Uranus
     const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 16;
+    canvas.width = 1024;
+    canvas.height = 4;
     const ctx = canvas.getContext('2d');
     const base = new THREE.Color(data.ringColor);
-    for (let x = 0; x < 512; x++) {
-      const t = x / 512;
-      const band = Math.sin(t * 50) * 0.3 + 0.7;
-      const gap = Math.random() > 0.95 ? 0 : 1;
+    for (let x = 0; x < 1024; x++) {
+      const t = x / 1024;
+      const band = Math.sin(t * 60) * 0.25 + 0.75;
+      const gap = Math.random() > 0.92 ? 0 : 1;
       const alpha = band * gap * data.ringOpacity;
-      ctx.fillStyle = `rgba(${Math.floor(base.r * 255 * band)},${Math.floor(base.g * 255 * band)},${Math.floor(base.b * 255 * band)},${alpha})`;
-      ctx.fillRect(x, 0, 1, 16);
+      const r = Math.floor(base.r * 255 * band);
+      const g = Math.floor(base.g * 255 * band);
+      const b = Math.floor(base.b * 255 * band);
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.fillRect(x, 0, 1, 4);
     }
-    tex = new THREE.CanvasTexture(canvas);
+    const tex = new THREE.CanvasTexture(canvas);
+    mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: data.ringOpacity,
+      depthWrite: false,
+    });
   }
 
-  const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, opacity: data.ringOpacity, depthWrite: false });
   return new THREE.Mesh(geo, mat);
 }
 
@@ -250,22 +358,57 @@ function createRing(data) {
 // ASTEROID BELT
 // ============================================================================
 export function createAsteroidBelt(scene) {
-  const count = 1500;
-  const positions = new Float32Array(count * 3);
+  const count = 3000;
   const inner = 33, outer = 38;
+
+  // Deformed rock geometry — use low-poly icosahedron with vertex jitter
+  const baseGeo = new THREE.IcosahedronGeometry(0.12, 0);
+  const posAttr = baseGeo.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const jitter = 0.6 + Math.random() * 0.8; // 0.6–1.4 scale
+    posAttr.setXYZ(i, posAttr.getX(i) * jitter, posAttr.getY(i) * jitter, posAttr.getZ(i) * jitter);
+  }
+  posAttr.needsUpdate = true;
+  baseGeo.computeVertexNormals();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x887766,
+    roughness: 0.95,
+    metalness: 0.1,
+    flatShading: true,
+  });
+
+  const mesh = new THREE.InstancedMesh(baseGeo, mat, count);
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
+
   for (let i = 0; i < count; i++) {
     const r = inner + Math.random() * (outer - inner);
     const a = Math.random() * Math.PI * 2;
-    positions[i * 3]     = Math.cos(a) * r;
-    positions[i * 3 + 1] = (Math.random() - 0.5) * 1.5;
-    positions[i * 3 + 2] = Math.sin(a) * r;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    const y = (Math.random() - 0.5) * 2.0;
+
+    dummy.position.set(x, y, z);
+    const s = 0.4 + Math.random() * 1.4; // size variety
+    dummy.scale.set(s, s * (0.5 + Math.random() * 0.5), s);
+    dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+
+    // Per-instance color: grey-brown with variation
+    const lum = 0.25 + Math.random() * 0.35;
+    color.setRGB(lum + 0.04, lum, lum - 0.03);
+    mesh.setColorAt(i, color);
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const mat = new THREE.PointsMaterial({ color: 0x888877, size: 0.15, transparent: true, opacity: 0.6, sizeAttenuation: true });
-  const belt = new THREE.Points(geo, mat);
-  scene.add(belt);
-  return belt;
+
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+
+  scene.add(mesh);
+  return mesh;
 }
 
 // ============================================================================
