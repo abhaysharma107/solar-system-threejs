@@ -13,7 +13,7 @@ import { PLANETS } from './data/planets.js';
 import { getAllPositions } from './physics/ephemeris.js';
 import {
   createStarField, createSun, createPlanet, createAsteroidBelt, clickableMeshes,
-  orbitLines,
+  orbitLines, createMilkyWay,
 } from './objects/factories.js';
 import {
   smoothCameraTo, updateCamera, DEFAULT_CAM_POS, DEFAULT_CAM_TARGET,
@@ -87,6 +87,7 @@ function init() {
   scene.add(new THREE.HemisphereLight(0x4466aa, 0x222211, 0.3));
 
   // Build solar system
+  createMilkyWay(scene);
   createStarField(scene);
   sunObj = createSun(scene);
   PLANETS.forEach((data) => {

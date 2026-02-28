@@ -77,33 +77,149 @@ export function createStarField(scene) {
     group.add(new THREE.Points(geo, mat));
   });
 
-  // Milky Way band
-  const bandCount = 3000;
-  const bandPos = new Float32Array(bandCount * 3);
-  const bandCol = new Float32Array(bandCount * 3);
-  for (let i = 0; i < bandCount; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = 350 + Math.random() * 200;
-    const y = (Math.random() - 0.5) * 40 * Math.exp(-Math.random() * 2);
-    bandPos[i * 3]     = Math.cos(a) * r;
-    bandPos[i * 3 + 1] = y;
-    bandPos[i * 3 + 2] = Math.sin(a) * r;
-    const b = 0.3 + Math.random() * 0.2;
-    bandCol[i * 3]     = b * 1.2;
-    bandCol[i * 3 + 1] = b;
-    bandCol[i * 3 + 2] = b * 0.8;
-  }
-  const bandGeo = new THREE.BufferGeometry();
-  bandGeo.setAttribute('position', new THREE.BufferAttribute(bandPos, 3));
-  bandGeo.setAttribute('color', new THREE.BufferAttribute(bandCol, 3));
-  const bandMat = new THREE.PointsMaterial({
-    size: 2.5, vertexColors: true, transparent: true, opacity: 0.15,
-    sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  });
-  group.add(new THREE.Points(bandGeo, bandMat));
-
   scene.add(group);
   return group;
+}
+
+// ============================================================================
+// MILKY WAY SKYSPHERE — procedural equirectangular texture on BackSide sphere
+// ============================================================================
+export function createMilkyWay(scene) {
+  const W = 2048, H = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── 1. Deep-space background ──
+  ctx.fillStyle = '#00000a';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 2. Wide galactic halo ──
+  const halo = ctx.createLinearGradient(0, H * 0.18, 0, H * 0.82);
+  halo.addColorStop(0.0,  'rgba(5,8,25,0)');
+  halo.addColorStop(0.28, 'rgba(15,22,70,0.07)');
+  halo.addColorStop(0.50, 'rgba(35,50,130,0.18)');
+  halo.addColorStop(0.72, 'rgba(15,22,70,0.07)');
+  halo.addColorStop(1.0,  'rgba(5,8,25,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 3. Bright inner band ──
+  const band = ctx.createLinearGradient(0, H * 0.36, 0, H * 0.64);
+  band.addColorStop(0.0,  'rgba(60,80,200,0)');
+  band.addColorStop(0.22, 'rgba(90,110,230,0.10)');
+  band.addColorStop(0.50, 'rgba(170,185,255,0.28)');
+  band.addColorStop(0.78, 'rgba(90,110,230,0.10)');
+  band.addColorStop(1.0,  'rgba(60,80,200,0)');
+  ctx.fillStyle = band;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 4. Sharp bright spine ──
+  const spine = ctx.createLinearGradient(0, H * 0.46, 0, H * 0.54);
+  spine.addColorStop(0,   'rgba(200,215,255,0)');
+  spine.addColorStop(0.5, 'rgba(200,215,255,0.22)');
+  spine.addColorStop(1,   'rgba(200,215,255,0)');
+  ctx.fillStyle = spine;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 5. Galactic centre bulge (warm yellow-white) ──
+  const cx = W * 0.50, cy = H * 0.50;
+  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.28);
+  core.addColorStop(0.00, 'rgba(255,245,200,0.55)');
+  core.addColorStop(0.06, 'rgba(240,220,160,0.40)');
+  core.addColorStop(0.18, 'rgba(180,160,220,0.18)');
+  core.addColorStop(0.45, 'rgba(90,80,180,0.07)');
+  core.addColorStop(1.00, 'rgba(0,0,0,0)');
+  ctx.fillStyle = core;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 6. Secondary arm hints ──
+  [
+    { x: W * 0.22, y: H * 0.50, rx: W * 0.22, c: 'rgba(70,90,210,0.11)' },
+    { x: W * 0.78, y: H * 0.50, rx: W * 0.20, c: 'rgba(60,80,200,0.09)' },
+    { x: W * 0.10, y: H * 0.51, rx: W * 0.14, c: 'rgba(50,60,180,0.06)' },
+    { x: W * 0.90, y: H * 0.49, rx: W * 0.13, c: 'rgba(50,60,180,0.06)' },
+  ].forEach(({ x, y, rx, c }) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rx);
+    g.addColorStop(0,   c);
+    g.addColorStop(0.5, c.replace(/[\d.]+\)$/, '0.03)'));
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  });
+
+  // ── 7. Dust lanes — multiply dark streaks ──
+  ctx.globalCompositeOperation = 'multiply';
+  // Main lane just above centre
+  const dust1 = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.52);
+  dust1.addColorStop(0,   'rgba(0,0,0,0)');
+  dust1.addColorStop(0.4, 'rgba(0,0,0,0.55)');
+  dust1.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = dust1;
+  ctx.fillRect(W * 0.15, 0, W * 0.70, H);
+  // Secondary wispy lane
+  const dust2 = ctx.createLinearGradient(0, H * 0.49, 0, H * 0.56);
+  dust2.addColorStop(0,   'rgba(0,0,0,0)');
+  dust2.addColorStop(0.5, 'rgba(0,0,0,0.30)');
+  dust2.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle = dust2;
+  ctx.fillRect(W * 0.35, 0, W * 0.30, H);
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ── 8. Nebula colour clouds ──
+  const nebulae = [
+    { x: W*0.48, y: H*0.47, r: 60,  col: 'rgba(180,80,255,0.08)' },
+    { x: W*0.55, y: H*0.52, r: 80,  col: 'rgba(80,160,255,0.07)' },
+    { x: W*0.30, y: H*0.49, r: 70,  col: 'rgba(100,200,255,0.06)' },
+    { x: W*0.70, y: H*0.51, r: 65,  col: 'rgba(255,140,80,0.05)' },
+    { x: W*0.20, y: H*0.50, r: 55,  col: 'rgba(120,80,220,0.05)' },
+    { x: W*0.82, y: H*0.50, r: 50,  col: 'rgba(80,200,180,0.05)' },
+  ];
+  nebulae.forEach(({ x, y, r, col }) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  });
+
+  // ── 9. Micro-stars — 22 000 dots, band-biased ──
+  const starData = ctx.getImageData(0, 0, W, H);
+  const d = starData.data;
+  for (let i = 0; i < 22000; i++) {
+    const sx = Math.floor(Math.random() * W);
+    // Bias toward galactic plane — gaussian around y=H/2
+    const dy = (Math.random() + Math.random() + Math.random() - 1.5) * H * 0.28;
+    const sy = Math.floor(Math.max(0, Math.min(H - 1, H / 2 + dy)));
+    const idx = (sy * W + sx) * 4;
+    const bright = 100 + Math.random() * 155;
+    // Colour tint based on position in band
+    const bandNorm = 1 - Math.abs((sy / H) - 0.5) * 2;
+    const blueShift = bandNorm * 30;
+    const warmShift = (1 - bandNorm) * 20;
+    d[idx]     = Math.min(255, bright + warmShift);
+    d[idx + 1] = Math.min(255, bright);
+    d[idx + 2] = Math.min(255, bright + blueShift);
+    d[idx + 3] = Math.floor(60 + Math.random() * 195 * bandNorm + 40);
+  }
+  ctx.putImageData(starData, 0, 0);
+
+  // ── 10. Build sphere ──
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const geo = new THREE.SphereGeometry(900, 64, 40);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.96,
+    depthWrite: false,
+  });
+  const sphere = new THREE.Mesh(geo, mat);
+  // Tilt the galactic plane ~60° relative to ecliptic (roughly correct)
+  sphere.rotation.x = Math.PI * 0.18;
+  scene.add(sphere);
+  return sphere;
 }
 
 // ============================================================================
