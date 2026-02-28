@@ -475,3 +475,101 @@ export function createLabel(text, color, scale = 0.6) {
   sprite.scale.set(4 * scale, 1 * scale, 1);
   return sprite;
 }
+
+// ============================================================================
+// SOCIAL BEACONS — glowing waypoint sprites floating near the Sun
+// ============================================================================
+export const socialBeacons = [];
+
+function makeBeaconSprite(icon, label, color, url) {
+  const S = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = S; canvas.height = S;
+  const ctx = canvas.getContext('2d');
+
+  // Outer glow
+  const glow = ctx.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+  const c = new THREE.Color(color);
+  const r = Math.floor(c.r * 255), g = Math.floor(c.g * 255), b = Math.floor(c.b * 255);
+  glow.addColorStop(0,   `rgba(${r},${g},${b},0.9)`);
+  glow.addColorStop(0.25, `rgba(${r},${g},${b},0.5)`);
+  glow.addColorStop(0.6, `rgba(${r},${g},${b},0.12)`);
+  glow.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, S, S);
+
+  // Icon
+  ctx.font = `${S * 0.38}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(icon, S/2, S/2 - 4);
+
+  // Label below
+  ctx.font = `bold ${S * 0.14}px Arial, sans-serif`;
+  ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+  ctx.fillText(label, S/2, S*0.78);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({
+    map: tex,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3.5, 3.5, 1);
+  sprite.userData = { url, label, isBeacon: true };
+  return sprite;
+}
+
+export function createSocialBeacons(scene) {
+  const beacons = [
+    { icon: '💼', label: 'LinkedIn', color: 0x0a66c2, url: 'https://www.linkedin.com/in/abhaysharma107/', angle: -0.4, y: 7, dist: 6 },
+    { icon: '🐙', label: 'GitHub', color: 0xc9d1d9, url: 'https://github.com/abhaysharma107', angle: 0.4, y: 7, dist: 6 },
+    { icon: '✉️',  label: 'Email', color: 0x44ddaa, url: 'mailto:abhay.shar107@gmail.com', angle: 0, y: 9, dist: 4 },
+  ];
+
+  beacons.forEach(({ icon, label, color, url, angle, y, dist }) => {
+    const sprite = makeBeaconSprite(icon, label, color, url);
+    sprite.position.set(Math.sin(angle) * dist, y, Math.cos(angle) * dist);
+    scene.add(sprite);
+    socialBeacons.push(sprite);
+  });
+
+  return socialBeacons;
+}
+
+// ============================================================================
+// NAV HINT — pulsing torus ring around the Sun that fades after first click
+// ============================================================================
+export function createNavHint(scene) {
+  const geo = new THREE.TorusGeometry(7, 0.04, 8, 80);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffdd44,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+  });
+  const ring = new THREE.Mesh(geo, mat);
+  ring.rotation.x = Math.PI / 2; // lay flat
+  ring.position.y = 0.2;
+  ring.userData.isNavHint = true;
+  scene.add(ring);
+
+  // Second ring slightly larger, different phase
+  const geo2 = new THREE.TorusGeometry(8.5, 0.03, 8, 80);
+  const mat2 = new THREE.MeshBasicMaterial({
+    color: 0xffaa22,
+    transparent: true,
+    opacity: 0.2,
+    depthWrite: false,
+  });
+  const ring2 = new THREE.Mesh(geo2, mat2);
+  ring2.rotation.x = Math.PI / 2;
+  ring2.position.y = 0.2;
+  ring2.userData.isNavHint = true;
+  scene.add(ring2);
+
+  return { ring, ring2 };
+}

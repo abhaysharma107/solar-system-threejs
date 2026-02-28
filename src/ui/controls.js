@@ -6,11 +6,9 @@ import * as THREE from 'three';
 import { BODY_INFO } from '../data/planets.js';
 
 // ── State ──
-export let speedMultiplier = 1.0;
-export let speedMode = 'artistic'; // 'artistic' | 'realtime'
+export let speedMultiplier = 2;
 
 export function setSpeedMultiplier(v) { speedMultiplier = v; }
-export function setSpeedMode(m) { speedMode = m; }
 
 /**
  * Wire up all UI event listeners.
@@ -20,24 +18,11 @@ export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn, toggleOrbits
   // Speed buttons
   document.querySelectorAll('[data-speed]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      speedMode = 'artistic';
       speedMultiplier = parseFloat(btn.dataset.speed);
       document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
-      document.getElementById('btn-realtime')?.classList.remove('active');
       btn.classList.add('active');
     });
   });
-
-  // Real-time button
-  const rtBtn = document.getElementById('btn-realtime');
-  if (rtBtn) {
-    rtBtn.addEventListener('click', () => {
-      speedMode = 'realtime';
-      speedMultiplier = 1;
-      document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
-      rtBtn.classList.add('active');
-    });
-  }
 
   // Planet focus buttons
   document.querySelectorAll('[data-planet]').forEach((btn) => {
@@ -95,15 +80,15 @@ export function showInfoPanel(name, color, unlockFn) {
   const hex = '#' + c.getHexString();
 
   const rows = [
-    ['Type', info.type],
-    ['Diameter', info.diameter],
-    ['Mass', info.mass],
-    ['Distance from Sun', info.distanceFromSun],
-    ['Orbital Period', info.orbitalPeriod],
-    ['Day Length', info.dayLength],
-    ['Surface Temp', info.surfaceTemp],
-    ['Moons', info.moons],
-  ].filter(([, v]) => v && v !== '—' || name === 'Sun');
+    ['Role', info.type],
+    ['Duration', info.diameter],
+    ['Organization', info.mass],
+    ['Context', info.distanceFromSun],
+    ['Contact', info.orbitalPeriod],
+    ['Stack', info.dayLength],
+    ['Domain', info.surfaceTemp],
+    ['Satellites', info.moons],
+  ].filter(([, v]) => v && v !== '—');
 
   panel.innerHTML = `
     <div class="ip-header">
@@ -143,17 +128,13 @@ export function updateSimClock(simDate) {
   const el = document.getElementById('sim-time');
   if (!el) return;
 
-  if (speedMode === 'artistic' && speedMultiplier === 0) {
+  if (speedMultiplier === 0) {
     el.textContent = 'Paused';
     return;
   }
 
   const opts = { year: 'numeric', month: 'short', day: 'numeric' };
   const dateStr = simDate.toLocaleDateString('en-US', opts);
-
-  if (speedMode === 'realtime') {
-    el.textContent = `${dateStr}  ⏱ Real-time`;
-  } else {
-    el.textContent = dateStr;
-  }
+  const label = speedMultiplier <= 1 ? 'Gentle' : speedMultiplier <= 5 ? 'Normal' : speedMultiplier <= 15 ? 'Brisk' : 'Fast';
+  el.textContent = `${dateStr}  · ${label}`;
 }

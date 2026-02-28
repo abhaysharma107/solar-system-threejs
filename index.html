@@ -3,10 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Three.js Solar System</title>
+    <title>Abhay Sharma · Portfolio System</title>
+    <meta name="description" content="Abhay Sharma — Interactive 3D portfolio. Explore my professional universe." />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { overflow: hidden; background: #000; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+      /* ── Loading Overlay ── */
+      #loading-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: #000008;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.9s ease;
+      }
+      #loading-overlay .loading-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 6px;
+        text-shadow: 0 0 18px rgba(255,200,50,0.4);
+        letter-spacing: 2px;
+      }
+      #loading-overlay .loading-sub {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 28px;
+        letter-spacing: 1px;
+      }
+      #loading-track {
+        width: 220px;
+        height: 3px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      #loading-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #ffdd44, #ffaa22);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+      #loading-pct {
+        font-size: 11px;
+        color: #665;
+        font-variant-numeric: tabular-nums;
+      }
 
       /* ── UI Overlay ── */
       #ui {
@@ -16,6 +64,8 @@
         z-index: 10;
         color: #ccc;
         user-select: none;
+        opacity: 0;
+        transition: opacity 0.8s ease 0.2s;
       }
       #ui h1 {
         font-size: 18px;
@@ -259,36 +309,45 @@
         left: 50%;
         transform: translateX(-50%);
         z-index: 10;
-        color: #444;
+        color: rgba(255,220,100,0.25);
         font-size: 11px;
         text-align: center;
         pointer-events: none;
+        letter-spacing: 2px;
+        text-transform: lowercase;
+        opacity: 0;
+        transition: opacity 0.8s ease 0.4s;
+        animation: hintPulse 4s ease-in-out infinite;
       }
-      #hint kbd {
-        background: rgba(255,255,255,0.08);
-        padding: 1px 5px;
-        border-radius: 3px;
-        font-family: inherit;
-        font-size: 10px;
+      @keyframes hintPulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
       }
     </style>
   </head>
   <body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+      <div class="loading-title">☄ Abhay's System</div>
+      <div class="loading-sub">Initializing the universe…</div>
+      <div id="loading-track"><div id="loading-bar"></div></div>
+      <div id="loading-pct">0%</div>
+    </div>
+
     <!-- UI Overlay -->
     <div id="ui">
-      <h1>☀ Solar System</h1>
-      <div class="subtitle">Three.js · Interactive 3D Visualization</div>
+      <h1>☀ Abhay's System</h1>
+      <div class="subtitle">Portfolio · Interactive 3D Experience</div>
 
       <!-- Speed Controls -->
       <div class="control-group">
         <label>Simulation Speed</label>
         <div class="btn-row">
           <button class="btn" data-speed="0">⏸ Pause</button>
-          <button id="btn-realtime" class="btn">⏱ Real</button>
-          <button class="btn" data-speed="0.25">¼×</button>
-          <button class="btn active" data-speed="1">1×</button>
-          <button class="btn" data-speed="3">3×</button>
-          <button class="btn" data-speed="10">10×</button>
+          <button class="btn" data-speed="1">Gentle</button>
+          <button class="btn active" data-speed="2">Normal</button>
+          <button class="btn" data-speed="8">Brisk</button>
+          <button class="btn" data-speed="25">Fast</button>
         </div>
         <div id="sim-badge"><span id="sim-time">Loading…</span></div>
       </div>
@@ -303,19 +362,27 @@
       </div>
 
       <!-- Navigate to Planets -->
+      <!-- Companies -->
       <div class="control-group">
-        <label>Focus On</label>
+        <label>Experience</label>
         <div class="planet-grid">
-          <button class="planet-btn" data-planet="Sun"><span class="dot" style="background:#ffdd44"></span>Sun</button>
-          <button class="planet-btn" data-planet="Mercury"><span class="dot" style="background:#b5b5b5"></span>Mercury</button>
-          <button class="planet-btn" data-planet="Venus"><span class="dot" style="background:#e8cda0"></span>Venus</button>
-          <button class="planet-btn" data-planet="Earth"><span class="dot" style="background:#2233ff"></span>Earth</button>
-          <button class="planet-btn" data-planet="Mars"><span class="dot" style="background:#cc4422"></span>Mars</button>
-          <button class="planet-btn" data-planet="Jupiter"><span class="dot" style="background:#d4a574"></span>Jupiter</button>
-          <button class="planet-btn" data-planet="Saturn"><span class="dot" style="background:#f4d59c"></span>Saturn</button>
-          <button class="planet-btn" data-planet="Uranus"><span class="dot" style="background:#88ccdd"></span>Uranus</button>
-          <button class="planet-btn" data-planet="Neptune"><span class="dot" style="background:#3344ff"></span>Neptune</button>
-          <button class="planet-btn" data-planet="Pluto"><span class="dot" style="background:#ccbb99"></span>Pluto</button>
+          <button class="planet-btn" data-planet="Abhay Sharma"><span class="dot" style="background:#ffdd44"></span>Abhay ☀</button>
+          <button class="planet-btn" data-planet="Kodekrew"><span class="dot" style="background:#b5b5b5"></span>Kodekrew</button>
+          <button class="planet-btn" data-planet="QBH Solutions"><span class="dot" style="background:#e8cda0"></span>QBH</button>
+          <button class="planet-btn" data-planet="5centsCDN"><span class="dot" style="background:#2233ff"></span>5centsCDN</button>
+          <button class="planet-btn" data-planet="ScoreMe"><span class="dot" style="background:#cc4422"></span>ScoreMe</button>
+        </div>
+      </div>
+
+      <!-- Skill Domains -->
+      <div class="control-group">
+        <label>Skills</label>
+        <div class="planet-grid">
+          <button class="planet-btn" data-planet="Angular"><span class="dot" style="background:#dd0031"></span>Angular</button>
+          <button class="planet-btn" data-planet="AI & LLMs"><span class="dot" style="background:#a855f7"></span>AI & LLMs</button>
+          <button class="planet-btn" data-planet="Infrastructure"><span class="dot" style="background:#88ccdd"></span>Infra</button>
+          <button class="planet-btn" data-planet="Creative"><span class="dot" style="background:#3344ff"></span>Creative</button>
+          <button class="planet-btn" data-planet="Future"><span class="dot" style="background:#ccbb99"></span>Future</button>
         </div>
       </div>
 
@@ -331,7 +398,7 @@
 
     <!-- Bottom hint -->
     <div id="hint">
-      <kbd>Click</kbd> planet to explore · <kbd>Scroll</kbd> zoom · <kbd>Drag</kbd> orbit
+      ✦ click to explore · scroll to travel · drag to orbit ✦
     </div>
 
     <script type="module" src="/src/main.js"></script>

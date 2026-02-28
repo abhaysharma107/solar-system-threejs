@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 
-export const DEFAULT_CAM_POS    = new THREE.Vector3(40, 60, 80);
+export const DEFAULT_CAM_POS    = new THREE.Vector3(15, 20, 30);
 export const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0, 0);
 
 // Transition state

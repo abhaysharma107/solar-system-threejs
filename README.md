@@ -1,29 +1,21 @@
-# Three.js Solar System
+# Abhay's System
 
-An interactive 3D solar system visualization built with Three.js and Vite.
+An interactive 3D portfolio built as a solar system — companies as inner planets, skills as outer planets, and moons as key deliverables.
+
+## Overview
+
+My professional universe, visualized. The Sun represents me; each planet is a company I've worked at or a skill domain I've explored. Moons orbit their parent planets as key deliverables and technologies. Real NASA Keplerian orbital elements drive the motion.
 
 ## Features
 
-- **All Planets** — Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune + Pluto
-- **Earth's Moon** — Orbiting Earth with realistic period
-- **Saturn's Rings** — Procedurally generated with band patterns and Cassini-like gaps
-- **Asteroid Belt** — 1,500 particles between Mars and Jupiter
-- **Star Field** — 2,000 background stars with color variation
-- **Orbital Mechanics** — Keplerian orbital periods (artistically scaled)
-- **Interactive Camera** — OrbitControls (drag to orbit, scroll to zoom, right-drag to pan)
-- **Speed Controls** — Pause, ¼×, 1×, 3×, 10× simulation speed
-- **Planet Focus** — Click any planet name to fly the camera there
-- **Glowing Sun** — Additive-blending sprite with pulsing glow
-- **Planet Labels** — Canvas-texture sprites rendered in 3D space
-- **Dashed Orbit Lines** — Color-coded for each planet
-
-## Sources & Inspiration
-
-- [Official Three.js scenegraph-sun-earth-moon example](https://threejs.org/manual/#en/scenegraph)
-- [sanderblue/solar-system-threejs](https://github.com/sanderblue/solar-system-threejs) (398★)
-- [NASA Solar System Data](https://nssdc.gsfc.nasa.gov/planetary/factsheet/)
-
-> **Note:** NASA's "Eyes on the Solar System" (eyes.nasa.gov) is proprietary, not open-source. This is an open-source recreation using real NASA data.
+- **Portfolio as a Solar System** — Companies, skills, and achievements mapped to celestial bodies
+- **Real Orbital Mechanics** — NASA JPL Keplerian elements for authentic planet positions
+- **Interactive Camera** — Orbit, zoom, and pan to explore the system
+- **Speed Controls** — Pause, Gentle, Normal, Brisk, Fast simulation speeds
+- **Click to Explore** — Click any body to see detailed info panels
+- **Social Beacons** — GitHub, LinkedIn, and Email floating near the Sun
+- **Loading Screen** — Smooth progress bar while assets load
+- **Saturn's Rings, Asteroid Belt, Milky Way** — Full atmospheric scene
 
 ## Getting started
 
@@ -42,18 +34,22 @@ npm run preview   # Preview production build
 | Zoom | Scroll wheel |
 | Pan | Right-click + drag |
 | Speed | UI buttons (top-left) |
-| Focus planet | Click planet name (top-left) |
+| Focus body | Click planet name or body (top-left) |
 
 ## Architecture
 
 ```
-main.js           # Complete solar system (~450 lines)
-index.html        # HTML shell + UI overlay
-vite.config.js    # Vite configuration
-package.json      # Dependencies: three, vite
+src/
+  main.js              # Entry point — scene, animation loop
+  camera/              # Camera transitions & tracking
+  data/                # Planet & portfolio data
+  objects/             # 3D factories — planets, stars, rings, beacons
+  physics/             # NASA JPL ephemeris calculations
+  ui/                  # Speed controls, info panel, sim clock
+index.html             # HTML shell + UI overlay + loading screen
 ```
 
-## Tech stack
+## Inspiration
 
-- [Three.js](https://threejs.org/) — 3D rendering
-- [Vite](https://vitejs.dev/) — build tool & dev server
+- [bruno-simon.com](https://bruno-simon.com/) — interactive 3D portfolio
+- [NASA Solar System Data](https://nssdc.gsfc.nasa.gov/planetary/factsheet/)
