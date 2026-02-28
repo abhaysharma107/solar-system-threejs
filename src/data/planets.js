@@ -16,6 +16,7 @@ export const PLANETS = [
     emissive: 0x111111,
     tilt: 0.034,
     orbitColor: 0x555555,
+    texture: '/textures/mercury.jpg',
   },
   {
     name: 'Venus',
@@ -27,6 +28,7 @@ export const PLANETS = [
     emissive: 0x221100,
     tilt: 3.096,
     orbitColor: 0x665533,
+    texture: '/textures/venus.jpg',
   },
   {
     name: 'Earth',
@@ -38,8 +40,9 @@ export const PLANETS = [
     emissive: 0x112244,
     tilt: 0.409,
     orbitColor: 0x3366aa,
+    texture: '/textures/earth.jpg',
     moons: [
-      { name: 'Moon', radius: 0.27, distance: 2.5, orbitalPeriod: 27.3, color: 0xaaaaaa },
+      { name: 'Moon', radius: 0.27, distance: 2.5, orbitalPeriod: 27.3, color: 0xaaaaaa, texture: '/textures/moon.jpg' },
     ],
   },
   {
@@ -52,6 +55,7 @@ export const PLANETS = [
     emissive: 0x331100,
     tilt: 0.440,
     orbitColor: 0x884422,
+    texture: '/textures/mars.jpg',
   },
   {
     name: 'Jupiter',
@@ -63,6 +67,7 @@ export const PLANETS = [
     emissive: 0x221100,
     tilt: 0.055,
     orbitColor: 0x886644,
+    texture: '/textures/jupiter.jpg',
     hasRing: true, ringInner: 3.2, ringOuter: 4.5, ringColor: 0x776655, ringOpacity: 0.2,
   },
   {
@@ -75,7 +80,8 @@ export const PLANETS = [
     emissive: 0x332200,
     tilt: 0.467,
     orbitColor: 0x998866,
-    hasRing: true, ringInner: 2.8, ringOuter: 5.5, ringColor: 0xc8a860, ringOpacity: 0.6,
+    texture: '/textures/saturn.jpg',
+    hasRing: true, ringInner: 2.8, ringOuter: 5.5, ringColor: 0xc8a860, ringOpacity: 0.6, ringTexture: '/textures/saturn_ring.png',
   },
   {
     name: 'Uranus',
@@ -87,6 +93,7 @@ export const PLANETS = [
     emissive: 0x112233,
     tilt: 1.706,
     orbitColor: 0x5599aa,
+    texture: '/textures/uranus.jpg',
     hasRing: true, ringInner: 2.0, ringOuter: 3.0, ringColor: 0x667788, ringOpacity: 0.15,
   },
   {
@@ -99,6 +106,7 @@ export const PLANETS = [
     emissive: 0x111144,
     tilt: 0.494,
     orbitColor: 0x3344aa,
+    texture: '/textures/neptune.jpg',
   },
   {
     name: 'Pluto',
@@ -110,6 +118,7 @@ export const PLANETS = [
     emissive: 0x111100,
     tilt: 2.138,
     orbitColor: 0x665544,
+    texture: '/textures/pluto.jpg',
   },
 ];
 

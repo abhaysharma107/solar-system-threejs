@@ -7,6 +7,8 @@ import * as THREE from 'three';
 // ── Shared registries (exported for main to access) ──
 export const clickableMeshes = new Map(); // mesh → { name, radius, color }
 
+const textureLoader = new THREE.TextureLoader();
+
 // ============================================================================
 // STAR FIELD
 // ============================================================================
@@ -51,7 +53,8 @@ export function createStarField(scene) {
 // ============================================================================
 export function createSun(scene) {
   const geo = new THREE.SphereGeometry(4, 32, 32);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+  const sunTex = textureLoader.load('/textures/sun.jpg');
+  const mat = new THREE.MeshBasicMaterial({ map: sunTex });
   const sunMesh = new THREE.Mesh(geo, mat);
   scene.add(sunMesh);
 
@@ -97,12 +100,17 @@ export function createPlanet(scene, data) {
 
   // Planet mesh
   const geo = new THREE.SphereGeometry(data.radius, 32, 32);
-  const mat = new THREE.MeshPhongMaterial({
+  const matOpts = {
     color: data.color,
     emissive: data.emissive || 0x000000,
     shininess: 25,
     specular: 0x222222,
-  });
+  };
+  if (data.texture) {
+    matOpts.map = textureLoader.load(data.texture);
+    matOpts.color = 0xffffff; // let texture provide color
+  }
+  const mat = new THREE.MeshPhongMaterial(matOpts);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.x = data.distance;
   mesh.castShadow = true;
@@ -137,7 +145,12 @@ export function createPlanet(scene, data) {
       orbitPivot.add(moonPivot);
 
       const mGeo = new THREE.SphereGeometry(md.radius, 16, 16);
-      const mMat = new THREE.MeshPhongMaterial({ color: md.color, emissive: 0x111111, shininess: 10 });
+      const mMatOpts = { color: md.color, emissive: 0x111111, shininess: 10 };
+      if (md.texture) {
+        mMatOpts.map = textureLoader.load(md.texture);
+        mMatOpts.color = 0xffffff;
+      }
+      const mMat = new THREE.MeshPhongMaterial(mMatOpts);
       const mMesh = new THREE.Mesh(mGeo, mMat);
       mMesh.position.x = md.distance;
       moonPivot.add(mMesh);
@@ -186,20 +199,28 @@ function createRing(data) {
     uv.setXY(i, (dist - data.ringInner) / (data.ringOuter - data.ringInner), 0.5);
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 512; canvas.height = 16;
-  const ctx = canvas.getContext('2d');
-  const base = new THREE.Color(data.ringColor);
-  for (let x = 0; x < 512; x++) {
-    const t = x / 512;
-    const band = Math.sin(t * 50) * 0.3 + 0.7;
-    const gap = Math.random() > 0.95 ? 0 : 1;
-    const alpha = band * gap * data.ringOpacity;
-    ctx.fillStyle = `rgba(${Math.floor(base.r * 255 * band)},${Math.floor(base.g * 255 * band)},${Math.floor(base.b * 255 * band)},${alpha})`;
-    ctx.fillRect(x, 0, 1, 16);
+  let tex;
+  if (data.ringTexture) {
+    // Use real ring texture (e.g. Saturn)
+    tex = textureLoader.load(data.ringTexture);
+    tex.rotation = Math.PI / 2;
+  } else {
+    // Procedural ring
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    const base = new THREE.Color(data.ringColor);
+    for (let x = 0; x < 512; x++) {
+      const t = x / 512;
+      const band = Math.sin(t * 50) * 0.3 + 0.7;
+      const gap = Math.random() > 0.95 ? 0 : 1;
+      const alpha = band * gap * data.ringOpacity;
+      ctx.fillStyle = `rgba(${Math.floor(base.r * 255 * band)},${Math.floor(base.g * 255 * band)},${Math.floor(base.b * 255 * band)},${alpha})`;
+      ctx.fillRect(x, 0, 1, 16);
+    }
+    tex = new THREE.CanvasTexture(canvas);
   }
 
-  const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, opacity: data.ringOpacity, depthWrite: false });
   return new THREE.Mesh(geo, mat);
 }

@@ -14,9 +14,9 @@ export function setSpeedMode(m) { speedMode = m; }
 
 /**
  * Wire up all UI event listeners.
- * @param {Object} deps — { focusBodyFn, resetCameraFn }
+ * @param {Object} deps — { focusBodyFn, resetCameraFn, setSimDateFn }
  */
-export function setupUI({ focusBodyFn, resetCameraFn }) {
+export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn }) {
   // Speed buttons
   document.querySelectorAll('[data-speed]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -48,6 +48,30 @@ export function setupUI({ focusBodyFn, resetCameraFn }) {
 
   // Reset
   document.getElementById('btn-reset')?.addEventListener('click', resetCameraFn);
+
+  // ── Date controls ──
+  const datePicker = document.getElementById('date-picker');
+  const todayBtn = document.getElementById('btn-today');
+
+  // Set date picker to today's date
+  if (datePicker) {
+    datePicker.value = new Date().toISOString().slice(0, 10);
+    datePicker.addEventListener('change', () => {
+      if (datePicker.value && setSimDateFn) {
+        // Parse as local noon to avoid timezone offset issues
+        const [y, m, d] = datePicker.value.split('-').map(Number);
+        setSimDateFn(new Date(y, m - 1, d, 12, 0, 0));
+      }
+    });
+  }
+
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const now = new Date();
+      if (datePicker) datePicker.value = now.toISOString().slice(0, 10);
+      if (setSimDateFn) setSimDateFn(now);
+    });
+  }
 }
 
 // ============================================================================

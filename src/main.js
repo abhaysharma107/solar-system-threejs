@@ -93,7 +93,7 @@ function init() {
   applyEphemeris(new Date());
 
   // UI
-  setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera });
+  setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera, setSimDateFn: setSimDate });
 
   // Click
   renderer.domElement.addEventListener('click', onCanvasClick);
@@ -183,6 +183,11 @@ function resetCamera() {
   hideInfoPanel();
 }
 
+function setSimDate(date) {
+  simDate = new Date(date.getTime());
+  applyEphemeris(simDate);
+}
+
 // ============================================================================
 // ANIMATION LOOP
 // ============================================================================
@@ -210,13 +215,15 @@ function animate() {
     } else {
       p.mesh.rotation.y += p.data.rotationSpeed * speedMultiplier * delta * 60;
     }
-    // Moons
+    // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
-      const moonSpeed = (2 * Math.PI) / (m.data.orbitalPeriod * 0.05);
+      const radPerDay = (2 * Math.PI) / m.data.orbitalPeriod;
       if (speedMode === 'realtime') {
-        m.pivot.rotation.y += moonSpeed * delta;
+        // 1 real sec = 1 sim sec = 1/86400 day
+        m.pivot.rotation.y += radPerDay * (delta / 86400);
       } else {
-        m.pivot.rotation.y += moonSpeed * delta * speedMultiplier * 100;
+        // Artistic: speedMultiplier * 100 sim-days per real sec
+        m.pivot.rotation.y += radPerDay * speedMultiplier * 100 * delta;
       }
     });
   });
