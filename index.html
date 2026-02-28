@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js Solar System</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { overflow: hidden; background: #000; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+      /* ── UI Overlay ── */
+      #ui {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        color: #ccc;
+        user-select: none;
+      }
+      #ui h1 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 8px;
+        text-shadow: 0 0 10px rgba(255,200,50,0.5);
+        letter-spacing: 1px;
+      }
+      #ui .subtitle {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      /* ── Speed Controls ── */
+      .control-group {
+        margin-bottom: 10px;
+      }
+      .control-group label {
+        display: block;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #666;
+        margin-bottom: 4px;
+      }
+      .btn-row {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: #aaa;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn:hover {
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+      }
+      .btn.active {
+        background: rgba(255,200,50,0.2);
+        border-color: rgba(255,200,50,0.4);
+        color: #ffd040;
+      }
+
+      /* ── Planet Buttons ── */
+      .planet-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3px;
+      }
+      .planet-btn {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #888;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+      }
+      .planet-btn:hover {
+        background: rgba(255,255,255,0.12);
+        color: #ddd;
+      }
+      .planet-btn .dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-right: 4px;
+        vertical-align: middle;
+      }
+
+      /* ── Info Panel ── */
+      #info {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        color: #666;
+        font-size: 11px;
+        text-align: center;
+      }
+      #info kbd {
+        background: rgba(255,255,255,0.1);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-family: inherit;
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- UI Overlay -->
+    <div id="ui">
+      <h1>☀ Solar System</h1>
+      <div class="subtitle">Three.js · Interactive 3D Visualization</div>
+
+      <!-- Speed Controls -->
+      <div class="control-group">
+        <label>Simulation Speed</label>
+        <div class="btn-row">
+          <button class="btn" data-speed="0">⏸ Pause</button>
+          <button class="btn" data-speed="0.25">¼×</button>
+          <button class="btn active" data-speed="1">1×</button>
+          <button class="btn" data-speed="3">3×</button>
+          <button class="btn" data-speed="10">10×</button>
+        </div>
+      </div>
+
+      <!-- Navigate to Planets -->
+      <div class="control-group">
+        <label>Focus On</label>
+        <div class="planet-grid">
+          <button class="planet-btn" data-planet="Sun"><span class="dot" style="background:#ffdd44"></span>Sun</button>
+          <button class="planet-btn" data-planet="Mercury"><span class="dot" style="background:#b5b5b5"></span>Mercury</button>
+          <button class="planet-btn" data-planet="Venus"><span class="dot" style="background:#e8cda0"></span>Venus</button>
+          <button class="planet-btn" data-planet="Earth"><span class="dot" style="background:#2233ff"></span>Earth</button>
+          <button class="planet-btn" data-planet="Mars"><span class="dot" style="background:#cc4422"></span>Mars</button>
+          <button class="planet-btn" data-planet="Jupiter"><span class="dot" style="background:#d4a574"></span>Jupiter</button>
+          <button class="planet-btn" data-planet="Saturn"><span class="dot" style="background:#f4d59c"></span>Saturn</button>
+          <button class="planet-btn" data-planet="Uranus"><span class="dot" style="background:#88ccdd"></span>Uranus</button>
+          <button class="planet-btn" data-planet="Neptune"><span class="dot" style="background:#3344ff"></span>Neptune</button>
+          <button class="planet-btn" data-planet="Pluto"><span class="dot" style="background:#ccbb99"></span>Pluto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Info -->
+    <div id="info">
+      <kbd>Scroll</kbd> zoom · <kbd>Drag</kbd> orbit · <kbd>Right-drag</kbd> pan
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
