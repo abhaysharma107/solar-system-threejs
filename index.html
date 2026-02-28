@@ -68,22 +68,6 @@
         color: #ffd040;
       }
 
-      /* ── Date Input ── */
-      .date-input {
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.12);
-        color: #aaa;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-family: inherit;
-        cursor: pointer;
-        flex: 1;
-        color-scheme: dark;
-      }
-      .date-input:hover { background: rgba(255,255,255,0.15); color: #fff; }
-      .date-input:focus { outline: none; border-color: rgba(255,200,50,0.4); color: #ffd040; }
-
       /* ── Planet Buttons ── */
       .planet-grid {
         display: grid;
@@ -351,21 +335,11 @@
         <div class="btn-row">
           <button class="btn" data-speed="0">⏸ Pause</button>
           <button class="btn active" data-speed="0.25">Slow</button>
-          <button class="btn" data-speed="1">1×</button>
-          <button class="btn" data-speed="3">3×</button>
-          <button class="btn" data-speed="8">Fast</button>
+          <button class="btn" data-speed="1">Normal</button>
+          <button class="btn" data-speed="5">Fast</button>
           <button class="btn" data-speed="20">Warp</button>
         </div>
         <div id="sim-badge"><span id="sim-time">Loading…</span></div>
-      </div>
-
-      <!-- Date Controls -->
-      <div class="control-group">
-        <label>Start Date</label>
-        <div class="btn-row">
-          <button class="btn" id="btn-today">📅 Today</button>
-          <input type="date" id="date-picker" class="date-input" />
-        </div>
       </div>
 
       <!-- Navigate to Planets -->

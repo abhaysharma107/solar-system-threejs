@@ -119,6 +119,13 @@ function init() {
   // Set real initial positions from ephemeris
   applyEphemeris(new Date());
 
+  // Set initial angles for social link planets (no ephemeris)
+  planetObjects.forEach((p) => {
+    if (p.data.isSocialLink && p.data.startAngle !== undefined) {
+      p.orbitPivot.rotation.y = p.data.startAngle;
+    }
+  });
+
   // UI
   setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera, setSimDateFn: setSimDate, toggleOrbitsFn: toggleOrbits });
 
@@ -172,6 +179,7 @@ function onCanvasClick(event) {
   if (hits.length > 0) {
     const info = clickableMeshes.get(hits[0].object);
     if (info) {
+      startAmbient(); // ensure audio starts on any first interaction
       // Social link planets open URL in new tab
       if (info.url) {
         playClick();
@@ -183,7 +191,7 @@ function onCanvasClick(event) {
       fadeNavHint();
     }
   } else {
-    // First click anywhere starts ambient audio (browser autoplay policy)
+    // Click on empty space also starts ambient audio
     startAmbient();
   }
 }
@@ -304,8 +312,8 @@ function animate() {
   planetObjects.forEach((p) => {
     if (!p.data.isSocialLink) return;
     const orbitSpeed = (2 * Math.PI) / p.data.orbitalPeriod;
-    p.orbitPivot.rotation.y += orbitSpeed * speedMultiplier * 2 * delta * 86400;
-    p.mesh.rotation.y += 0.1 * delta;
+    p.orbitPivot.rotation.y += orbitSpeed * delta * 60;
+    p.mesh.rotation.y += 0.015 * delta;
   });
 
   // Sun

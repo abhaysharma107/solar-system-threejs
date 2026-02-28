@@ -249,10 +249,12 @@ export function createPlanet(scene, data) {
   label.position.set(data.distance, data.radius + 1.5, 0);
   orbitPivot.add(label);
 
-  // Orbit line
-  const orbitLine = createOrbitLine(data.distance, data.orbitColor || 0x444444);
-  scene.add(orbitLine);
-  orbitLines.push(orbitLine);
+  // Orbit line (skip for social link planets)
+  if (!data.isSocialLink) {
+    const orbitLine = createOrbitLine(data.distance, data.orbitColor || 0x444444);
+    scene.add(orbitLine);
+    orbitLines.push(orbitLine);
+  }
 
   // Rings
   if (data.hasRing) {
@@ -401,7 +403,7 @@ function createRing(data) {
 // ============================================================================
 export function createAsteroidBelt(scene) {
   const count = 3000;
-  const inner = 33, outer = 38;
+  const inner = 43, outer = 48;
 
   // Deformed rock geometry — use low-poly icosahedron with vertex jitter
   const baseGeo = new THREE.IcosahedronGeometry(0.12, 0);
@@ -458,9 +460,9 @@ export function createAsteroidBelt(scene) {
 // ============================================================================
 export function createLabel(text, color, scale = 0.6) {
   const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 512; canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 256, 64);
+  ctx.clearRect(0, 0, 512, 64);
   ctx.font = 'bold 32px Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -472,13 +474,13 @@ export function createLabel(text, color, scale = 0.6) {
   const g = Math.min(255, Math.floor(c.g * 255 + 80));
   const b = Math.min(255, Math.floor(c.b * 255 + 80));
   ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillText(text, 128, 32);
+  ctx.fillText(text, 256, 32);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(4 * scale, 1 * scale, 1);
+  sprite.scale.set(6 * scale, 0.75 * scale, 1);
   return sprite;
 }
 
