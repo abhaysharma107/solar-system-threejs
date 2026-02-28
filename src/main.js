@@ -99,7 +99,7 @@ function init() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 5;
+  controls.minDistance = 1;
   controls.maxDistance = 500;
   controls.enablePan = true;
 
@@ -121,8 +121,6 @@ function init() {
   });
   asteroidBelt = createAsteroidBelt(scene);
   createSocialBeacons(scene);
-  // Store base Y for bob animation
-  socialBeacons.forEach((b) => { b.userData._baseY = b.position.y; });
   navHint = createNavHint(scene);
 
   // Set real initial positions from ephemeris
@@ -219,16 +217,30 @@ function focusBodyByName(name) {
     radius = 4;
     color = 0xffdd44;
   } else {
+    // Check planets first
     const p = planetObjects.find((p) => p.data.name === name);
-    if (!p) return;
-    mesh = p.mesh;
-    radius = p.data.radius;
-    color = p.data.color;
+    if (p) {
+      mesh = p.mesh;
+      radius = p.data.radius;
+      color = p.data.color;
+    } else {
+      // Check moons
+      for (const planet of planetObjects) {
+        const moon = planet.moons.find((m) => m.data.name === name);
+        if (moon) {
+          mesh = moon.mesh;
+          radius = moon.data.radius;
+          color = moon.data.color;
+          break;
+        }
+      }
+      if (!mesh) return;
+    }
   }
 
   const worldPos = new THREE.Vector3();
   mesh.getWorldPosition(worldPos);
-  const zoomDist = radius * 7 + 5;
+  const zoomDist = radius * 4 + 2;
 
   lockedTarget = mesh;
   smoothCameraTo(mesh, worldPos, zoomDist, camera, controls);
@@ -267,12 +279,15 @@ function animate() {
   applyEphemeris(simDate);
 
   // Axial rotation (visual only, independent of ephemeris)
-  // rotationPeriod is in Earth days; angular vel = 2π / |period| rad/day
+  // Cap visual rotation speed so planets don't spin crazily
+  const maxVisualRadPerSec = 0.5; // cap visual spin speed
   planetObjects.forEach((p) => {
     const period = p.data.rotationPeriod || 1;
     const radPerDay = (2 * Math.PI) / Math.abs(period);
     const sign = period < 0 ? -1 : 1;
-    p.mesh.rotation.y += sign * radPerDay * daysPerSec * delta;
+    const rawSpeed = radPerDay * daysPerSec;
+    const cappedSpeed = Math.min(rawSpeed, maxVisualRadPerSec);
+    p.mesh.rotation.y += sign * cappedSpeed * delta;
     // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
       const moonRadPerDay = (2 * Math.PI) / m.data.orbitalPeriod;
@@ -302,13 +317,17 @@ function animate() {
     navHint.ring2.scale.setScalar(1 + Math.sin(t * 0.6 + 2) * 0.04);
   }
 
-  // Social beacon gentle bob
-  socialBeacons.forEach((b, i) => {
-    const t = clock.elapsedTime;
-    b.position.y = b.userData._baseY + Math.sin(t * 0.8 + i * 2) * 0.4;
-    const s = 3.5 + Math.sin(t * 1.2 + i) * 0.3;
-    b.scale.set(s, s, 1);
-  });
+  // Social satellite orbits
+  if (socialBeacons._orbits) {
+    socialBeacons._orbits.forEach((s) => {
+      const radPerDay = (2 * Math.PI) / s.data.orbitalPeriod;
+      s.pivot.rotation.y += radPerDay * daysPerSec * delta;
+      // Gentle glow pulse
+      const t = clock.elapsedTime;
+      const pulse = 0.12 + Math.sin(t * 1.5 + s.data.distance) * 0.05;
+      s.glowMesh.material.opacity = pulse;
+    });
+  }
 
   // Camera
   updateCamera(camera, controls, lockedTarget);

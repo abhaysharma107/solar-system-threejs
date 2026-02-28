@@ -78,11 +78,15 @@ export function updateCamera(camera, controls, lockedTarget) {
     return true;
   }
 
-  // No active transition — if locked, track the body
+  // No active transition — if locked, track the body tightly
   if (lockedTarget) {
     const wp = new THREE.Vector3();
     lockedTarget.getWorldPosition(wp);
-    controls.target.lerp(wp, 0.08);
+    controls.target.lerp(wp, 0.25);
+    // Keep camera following at same relative distance
+    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+    camera.position.copy(wp).add(offset);
+    camera.position.lerp(wp.clone().add(offset), 0.15);
   }
   return false;
 }

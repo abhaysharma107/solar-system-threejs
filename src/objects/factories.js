@@ -182,10 +182,10 @@ export function createSun(scene) {
   scene.add(glow);
 
   // Click registration
-  clickableMeshes.set(sunMesh, { name: 'Sun', radius: 4, color: 0xffdd44 });
+  clickableMeshes.set(sunMesh, { name: 'Abhay Sharma', radius: 4, color: 0xffdd44 });
 
   // Label
-  const label = createLabel('Sun', 0xffdd44);
+  const label = createLabel('Abhay Sharma', 0xffdd44);
   label.position.set(0, 6, 0);
   scene.add(label);
 
@@ -291,6 +291,9 @@ export function createPlanet(scene, data) {
       moonPivot.add(mLabel);
 
       moons.push({ pivot: moonPivot, mesh: mMesh, data: md });
+
+      // Register moon as clickable
+      clickableMeshes.set(mMesh, { name: md.name, radius: md.radius, color: md.color });
     });
   }
 
@@ -452,10 +455,10 @@ export function createAsteroidBelt(scene) {
 // ============================================================================
 export function createLabel(text, color, scale = 0.6) {
   const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 512; canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 256, 64);
-  ctx.font = 'bold 32px Arial, sans-serif';
+  ctx.clearRect(0, 0, 512, 64);
+  ctx.font = 'bold 28px Arial, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.8)';
@@ -466,77 +469,83 @@ export function createLabel(text, color, scale = 0.6) {
   const g = Math.min(255, Math.floor(c.g * 255 + 80));
   const b = Math.min(255, Math.floor(c.b * 255 + 80));
   ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillText(text, 128, 32);
+  ctx.fillText(text, 256, 32);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(4 * scale, 1 * scale, 1);
+  sprite.scale.set(6 * scale, 0.75 * scale, 1);
   return sprite;
 }
 
 // ============================================================================
-// SOCIAL BEACONS — glowing waypoint sprites floating near the Sun
+// SOCIAL SATELLITES — small glowing spheres orbiting the Sun, clickable links
 // ============================================================================
 export const socialBeacons = [];
 
-function makeBeaconSprite(icon, label, color, url) {
-  const S = 128;
-  const canvas = document.createElement('canvas');
-  canvas.width = S; canvas.height = S;
-  const ctx = canvas.getContext('2d');
-
-  // Outer glow
-  const glow = ctx.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
-  const c = new THREE.Color(color);
-  const r = Math.floor(c.r * 255), g = Math.floor(c.g * 255), b = Math.floor(c.b * 255);
-  glow.addColorStop(0,   `rgba(${r},${g},${b},0.9)`);
-  glow.addColorStop(0.25, `rgba(${r},${g},${b},0.5)`);
-  glow.addColorStop(0.6, `rgba(${r},${g},${b},0.12)`);
-  glow.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, S, S);
-
-  // Icon
-  ctx.font = `${S * 0.38}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(icon, S/2, S/2 - 4);
-
-  // Label below
-  ctx.font = `bold ${S * 0.14}px Arial, sans-serif`;
-  ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
-  ctx.fillText(label, S/2, S*0.78);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({
-    map: tex,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(3.5, 3.5, 1);
-  sprite.userData = { url, label, isBeacon: true };
-  return sprite;
-}
-
 export function createSocialBeacons(scene) {
-  const beacons = [
-    { icon: '💼', label: 'LinkedIn', color: 0x0a66c2, url: 'https://www.linkedin.com/in/abhaysharma107/', angle: -0.4, y: 7, dist: 6 },
-    { icon: '🐙', label: 'GitHub', color: 0xc9d1d9, url: 'https://github.com/abhaysharma107', angle: 0.4, y: 7, dist: 6 },
-    { icon: '✉️',  label: 'Email', color: 0x44ddaa, url: 'mailto:abhay.shar107@gmail.com', angle: 0, y: 9, dist: 4 },
+  const satellites = [
+    { name: 'LinkedIn', color: 0x0a66c2, emissive: 0x052d56, url: 'https://www.linkedin.com/in/abhaysharma107/', distance: 6.5, y: 0, radius: 0.35, orbitalPeriod: 8 },
+    { name: 'GitHub', color: 0xc9d1d9, emissive: 0x333333, url: 'https://github.com/abhaysharma107', distance: 7.5, y: 0, radius: 0.35, orbitalPeriod: 11 },
+    { name: 'Email', color: 0x44ddaa, emissive: 0x115533, url: 'mailto:abhay.shar107@gmail.com', distance: 8.5, y: 0, radius: 0.3, orbitalPeriod: 14 },
   ];
 
-  beacons.forEach(({ icon, label, color, url, angle, y, dist }) => {
-    const sprite = makeBeaconSprite(icon, label, color, url);
-    sprite.position.set(Math.sin(angle) * dist, y, Math.cos(angle) * dist);
-    scene.add(sprite);
-    socialBeacons.push(sprite);
+  const socialOrbits = [];
+
+  satellites.forEach((s) => {
+    // Orbit pivot so they orbit the Sun
+    const pivot = new THREE.Object3D();
+    pivot.name = s.name + '_socialOrbit';
+    // Stagger starting angle
+    pivot.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(pivot);
+
+    // Small glowing sphere
+    const geo = new THREE.SphereGeometry(s.radius, 32, 32);
+    const mat = new THREE.MeshStandardMaterial({
+      color: s.color,
+      emissive: new THREE.Color(s.emissive),
+      emissiveIntensity: 0.6,
+      roughness: 0.4,
+      metalness: 0.2,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.x = s.distance;
+    pivot.add(mesh);
+
+    // Glow shell
+    const glowGeo = new THREE.SphereGeometry(s.radius * 1.6, 16, 16);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: s.color,
+      transparent: true,
+      opacity: 0.15,
+      depthWrite: false,
+    });
+    const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+    glowMesh.position.x = s.distance;
+    pivot.add(glowMesh);
+
+    // Label
+    const label = createLabel(s.name, s.color, 0.35);
+    label.position.set(s.distance, s.radius + 0.7, 0);
+    pivot.add(label);
+
+    // Orbit line
+    const orbitLine = createOrbitLine(s.distance, s.color);
+    orbitLine.material.opacity = 0.12;
+    scene.add(orbitLine);
+    orbitLines.push(orbitLine);
+
+    // Store as beacon (clickable mesh with URL)
+    mesh.userData = { url: s.url, label: s.name, isSocialSatellite: true };
+    socialBeacons.push(mesh);
+
+    socialOrbits.push({ pivot, mesh, glowMesh, data: s });
   });
 
+  // Expose orbits for animation
+  socialBeacons._orbits = socialOrbits;
   return socialBeacons;
 }
 
