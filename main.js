@@ -18,6 +18,122 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ============================================================================
+// PLANET INFO — NASA fact-sheet data shown in the info panel on click
+// ============================================================================
+const BODY_INFO = {
+  Sun: {
+    type: 'Star · G-type Main Sequence',
+    diameter: '1,392,700 km',
+    mass: '1.989 × 10³⁰ kg',
+    distanceFromSun: '—',
+    orbitalPeriod: '—',
+    dayLength: '25–35 Earth days (differential)',
+    surfaceTemp: '5,500 °C (photosphere)',
+    moons: '—',
+    fact: 'The Sun contains 99.86% of the total mass of the entire Solar System.',
+  },
+  Mercury: {
+    type: 'Terrestrial Planet',
+    diameter: '4,879 km',
+    mass: '3.30 × 10²³ kg',
+    distanceFromSun: '57.9 million km (0.39 AU)',
+    orbitalPeriod: '88 Earth days',
+    dayLength: '176 Earth days',
+    surfaceTemp: '-180 °C to 430 °C',
+    moons: '0',
+    fact: 'A year on Mercury is shorter than a day on Mercury.',
+  },
+  Venus: {
+    type: 'Terrestrial Planet',
+    diameter: '12,104 km',
+    mass: '4.87 × 10²⁴ kg',
+    distanceFromSun: '108.2 million km (0.72 AU)',
+    orbitalPeriod: '225 Earth days',
+    dayLength: '243 Earth days (retrograde)',
+    surfaceTemp: '465 °C (average)',
+    moons: '0',
+    fact: 'Venus rotates backwards and is the hottest planet despite not being closest to the Sun.',
+  },
+  Earth: {
+    type: 'Terrestrial Planet',
+    diameter: '12,756 km',
+    mass: '5.97 × 10²⁴ kg',
+    distanceFromSun: '149.6 million km (1.00 AU)',
+    orbitalPeriod: '365.25 Earth days',
+    dayLength: '24 hours',
+    surfaceTemp: '-89 °C to 58 °C',
+    moons: '1 (The Moon)',
+    fact: 'Earth is the only known planet to harbor life and has liquid water on its surface.',
+  },
+  Mars: {
+    type: 'Terrestrial Planet',
+    diameter: '6,792 km',
+    mass: '6.39 × 10²³ kg',
+    distanceFromSun: '227.9 million km (1.52 AU)',
+    orbitalPeriod: '687 Earth days',
+    dayLength: '24 hrs 37 min',
+    surfaceTemp: '-87 °C to -5 °C',
+    moons: '2 (Phobos, Deimos)',
+    fact: 'Mars hosts Olympus Mons, the tallest volcano in the Solar System at 21 km high.',
+  },
+  Jupiter: {
+    type: 'Gas Giant',
+    diameter: '142,984 km',
+    mass: '1.90 × 10²⁷ kg',
+    distanceFromSun: '778.6 million km (5.20 AU)',
+    orbitalPeriod: '11.9 Earth years',
+    dayLength: '9 hrs 56 min',
+    surfaceTemp: '-108 °C (cloud tops)',
+    moons: '95 known',
+    fact: 'Jupiter\'s Great Red Spot is a storm that has persisted for over 350 years.',
+  },
+  Saturn: {
+    type: 'Gas Giant',
+    diameter: '120,536 km',
+    mass: '5.68 × 10²⁶ kg',
+    distanceFromSun: '1.43 billion km (9.58 AU)',
+    orbitalPeriod: '29.4 Earth years',
+    dayLength: '10 hrs 42 min',
+    surfaceTemp: '-138 °C (cloud tops)',
+    moons: '146 known',
+    fact: 'Saturn is the least dense planet — it would float on water if there were an ocean large enough.',
+  },
+  Uranus: {
+    type: 'Ice Giant',
+    diameter: '51,118 km',
+    mass: '8.68 × 10²⁵ kg',
+    distanceFromSun: '2.87 billion km (19.2 AU)',
+    orbitalPeriod: '84 Earth years',
+    dayLength: '17 hrs 14 min (retrograde)',
+    surfaceTemp: '-195 °C (average)',
+    moons: '28 known',
+    fact: 'Uranus rotates on its side with an axial tilt of 97.8°, likely from a massive ancient collision.',
+  },
+  Neptune: {
+    type: 'Ice Giant',
+    diameter: '49,528 km',
+    mass: '1.02 × 10²⁶ kg',
+    distanceFromSun: '4.50 billion km (30.1 AU)',
+    orbitalPeriod: '165 Earth years',
+    dayLength: '16 hrs 6 min',
+    surfaceTemp: '-200 °C (average)',
+    moons: '16 known',
+    fact: 'Neptune has the fastest winds in the Solar System, reaching 2,100 km/h.',
+  },
+  Pluto: {
+    type: 'Dwarf Planet',
+    diameter: '2,377 km',
+    mass: '1.30 × 10²² kg',
+    distanceFromSun: '5.91 billion km (39.5 AU)',
+    orbitalPeriod: '248 Earth years',
+    dayLength: '6.4 Earth days (retrograde)',
+    surfaceTemp: '-225 °C (average)',
+    moons: '5 (Charon, Nix, Hydra, Kerberos, Styx)',
+    fact: 'Pluto was reclassified as a dwarf planet in 2006. New Horizons revealed it has a heart-shaped nitrogen glacier.',
+  },
+};
+
+// ============================================================================
 // PLANET DATA — Real NASA data, artistically scaled for visibility
 // Distances and sizes use logarithmic/artistic scaling so all planets are visible
 // ============================================================================
@@ -156,6 +272,21 @@ let planetObjects = [];       // { orbitPivot, mesh, data, label, moons[] }
 let asteroidBelt;
 let speedMultiplier = 1.0;
 
+// Simulated time (in Earth days)
+let simulatedDays = 0;
+
+// Raycasting for click-to-focus
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const clickableMeshes = new Map(); // mesh → { name, data }
+
+// Camera lock — keeps camera tracking a moving planet
+let lockedTarget = null;   // null | THREE.Mesh
+
+// Default camera pose for reset
+const DEFAULT_CAM_POS = new THREE.Vector3(40, 60, 80);
+const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0, 0);
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -215,6 +346,9 @@ function init() {
   createPlanets();
   createAsteroidBelt();
   setupUI();
+
+  // --- Click to focus ---
+  renderer.domElement.addEventListener('click', onCanvasClick);
 
   // --- Resize ---
   window.addEventListener('resize', onWindowResize);
@@ -300,6 +434,9 @@ function createSun() {
   sunGlow = new THREE.Sprite(glowMaterial);
   sunGlow.scale.set(20, 20, 1);
   scene.add(sunGlow);
+
+  // Register sun as clickable
+  clickableMeshes.set(sunMesh, { name: 'Sun', radius: 4, color: 0xffdd44 });
 
   // Sun label
   const sunLabel = createLabel('Sun', 0xffdd44);
@@ -391,6 +528,9 @@ function createPlanets() {
         });
       });
     }
+
+    // Register planet as clickable
+    clickableMeshes.set(mesh, { name: data.name, radius: data.radius, color: data.color });
 
     planetObjects.push({
       orbitPivot,
@@ -563,6 +703,116 @@ function createLabel(text, color, scale = 0.6) {
 }
 
 // ============================================================================
+// CLICK TO FOCUS — Raycasting
+// ============================================================================
+function onCanvasClick(event) {
+  // Ignore if user was dragging (OrbitControls moves)
+  if (controls.domElement._wasDragging) return;
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const meshes = Array.from(clickableMeshes.keys());
+  const hits = raycaster.intersectObjects(meshes, false);
+
+  if (hits.length > 0) {
+    const hit = hits[0].object;
+    const info = clickableMeshes.get(hit);
+    if (info) focusBody(info.name, hit, info);
+  }
+}
+
+// Track drag so we don't fire focus on drag-release
+(function () {
+  let _mouseDownPos = { x: 0, y: 0 };
+  document.addEventListener('mousedown', (e) => {
+    _mouseDownPos = { x: e.clientX, y: e.clientY };
+    if (controls.domElement) controls.domElement._wasDragging = false;
+  });
+  document.addEventListener('mouseup', (e) => {
+    const dx = e.clientX - _mouseDownPos.x;
+    const dy = e.clientY - _mouseDownPos.y;
+    if (controls.domElement) {
+      controls.domElement._wasDragging = Math.sqrt(dx * dx + dy * dy) > 5;
+    }
+  });
+})();
+
+// ============================================================================
+// FOCUS BODY — Zoom + info panel + camera lock
+// ============================================================================
+function focusBody(name, mesh, info) {
+  const worldPos = new THREE.Vector3();
+  mesh.getWorldPosition(worldPos);
+
+  const zoomDist = (info.radius || 1) * 7 + 5;
+  lockedTarget = mesh;
+  smoothCameraTo(worldPos, zoomDist);
+  showInfoPanel(name, BODY_INFO[name], info.color);
+}
+
+// ============================================================================
+// RESET CAMERA
+// ============================================================================
+function resetCamera() {
+  lockedTarget = null;
+  smoothCameraTo(DEFAULT_CAM_TARGET.clone(), 0, DEFAULT_CAM_POS.clone());
+  hideInfoPanel();
+}
+
+// ============================================================================
+// INFO PANEL
+// ============================================================================
+function showInfoPanel(name, info, color) {
+  if (!info) return;
+  const panel = document.getElementById('info-panel');
+  const c = new THREE.Color(color || 0xffffff);
+  const hex = '#' + c.getHexString();
+
+  const rows = [
+    ['Type', info.type],
+    ['Diameter', info.diameter],
+    ['Mass', info.mass],
+    ['Distance from Sun', info.distanceFromSun],
+    ['Orbital Period', info.orbitalPeriod],
+    ['Day Length', info.dayLength],
+    ['Surface Temp', info.surfaceTemp],
+    ['Moons', info.moons],
+  ].filter(([, v]) => v && v !== '—' || name === 'Sun');
+
+  panel.innerHTML = `
+    <div class="ip-header">
+      <span class="ip-dot" style="background:${hex}"></span>
+      <h2>${name}</h2>
+      <button class="ip-close" id="ip-close-btn" title="Close">✕</button>
+    </div>
+    <div class="ip-type">${info.type}</div>
+    <div class="ip-facts">
+      ${rows.map(([k, v]) => `
+        <div class="ip-row">
+          <span class="ip-key">${k}</span>
+          <span class="ip-val">${v}</span>
+        </div>`).join('')}
+    </div>
+    <div class="ip-fact">
+      <span class="ip-fact-icon">💡</span>
+      <p>${info.fact}</p>
+    </div>
+  `;
+  panel.classList.add('visible');
+
+  document.getElementById('ip-close-btn').addEventListener('click', () => {
+    hideInfoPanel();
+    lockedTarget = null;
+  });
+}
+
+function hideInfoPanel() {
+  document.getElementById('info-panel').classList.remove('visible');
+}
+
+// ============================================================================
 // UI OVERLAY — Speed controls, info, planet buttons
 // ============================================================================
 function setupUI() {
@@ -571,56 +821,64 @@ function setupUI() {
   speedBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       speedMultiplier = parseFloat(btn.dataset.speed);
-      // Update active state
       document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
     });
   });
 
-  // Planet focus buttons
+  // Planet focus buttons (sidebar)
   const planetBtns = document.querySelectorAll('[data-planet]');
   planetBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetName = btn.dataset.planet;
       if (targetName === 'Sun') {
-        smoothCameraTo(new THREE.Vector3(0, 0, 0), 20);
+        focusBody('Sun', sunMesh, { radius: 4, color: 0xffdd44 });
         return;
       }
       const planet = planetObjects.find((p) => p.data.name === targetName);
       if (planet) {
-        // Get world position of the planet
-        const worldPos = new THREE.Vector3();
-        planet.mesh.getWorldPosition(worldPos);
-        smoothCameraTo(worldPos, planet.data.radius * 8 + 5);
+        focusBody(planet.data.name, planet.mesh, { radius: planet.data.radius, color: planet.data.color });
       }
     });
   });
+
+  // Reset camera button
+  document.getElementById('btn-reset').addEventListener('click', resetCamera);
 }
 
 // ============================================================================
 // SMOOTH CAMERA TRANSITION
+// smoothCameraTo(target, distance, [explicitPos])
+//   target      — THREE.Vector3 to look at
+//   distance    — how far from target to position camera (ignored if explicitPos given)
+//   explicitPos — optional exact camera end position (used for reset)
 // ============================================================================
-function smoothCameraTo(target, distance) {
+function smoothCameraTo(target, distance, explicitPos = null) {
   const startPos = camera.position.clone();
   const startTarget = controls.target.clone();
 
   const endTarget = target.clone();
-  const direction = new THREE.Vector3()
-    .subVectors(camera.position, controls.target)
-    .normalize();
-  const endPos = target.clone().add(direction.multiplyScalar(distance));
-  endPos.y = Math.max(endPos.y, distance * 0.3);
+  let endPos;
+  if (explicitPos) {
+    endPos = explicitPos.clone();
+  } else {
+    const direction = new THREE.Vector3()
+      .subVectors(camera.position, controls.target)
+      .normalize();
+    endPos = target.clone().add(direction.multiplyScalar(distance));
+    endPos.y = Math.max(endPos.y, distance * 0.3);
+  }
 
-  const duration = 1500;
+  const duration = 1600;
   const startTime = performance.now();
 
   function animateCamera() {
     const elapsed = performance.now() - startTime;
     const t = Math.min(elapsed / duration, 1);
-    // Ease in-out cubic
+    // Ease in-out quart
     const ease = t < 0.5
-      ? 4 * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      ? 8 * t * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 4) / 2;
 
     camera.position.lerpVectors(startPos, endPos, ease);
     controls.target.lerpVectors(startTarget, endTarget, ease);
@@ -637,7 +895,26 @@ function smoothCameraTo(target, distance) {
 // ANIMATION LOOP
 // ============================================================================
 function animate() {
-  const elapsed = clock.getElapsedTime() * speedMultiplier;
+  const delta = clock.getDelta();
+  const elapsed = clock.elapsedTime * speedMultiplier;
+
+  // Accumulate simulated time — at 1× speed, 1 real second = ~100 Earth days
+  simulatedDays += delta * speedMultiplier * 100;
+  const simYears = Math.floor(simulatedDays / 365.25);
+  const simDayOfYear = Math.floor(simulatedDays % 365.25);
+  const simEl = document.getElementById('sim-time');
+  if (simEl) {
+    simEl.textContent = speedMultiplier === 0
+      ? 'Paused'
+      : `Y${simYears} · D${simDayOfYear} · ${(delta * speedMultiplier * 100).toFixed(0)} days/s`;
+  }
+
+  // If camera is locked to a body, keep controls.target at body's world position
+  if (lockedTarget) {
+    const wp = new THREE.Vector3();
+    lockedTarget.getWorldPosition(wp);
+    controls.target.lerp(wp, 0.08);
+  }
 
   // Rotate Sun slowly
   sunMesh.rotation.y = elapsed * 0.1;
@@ -656,7 +933,7 @@ function animate() {
     orbitPivot.rotation.y = elapsed * orbitalSpeed;
 
     // Axial rotation
-    mesh.rotation.y += data.rotationSpeed * speedMultiplier * 0.016;
+    mesh.rotation.y += data.rotationSpeed * speedMultiplier * delta * 60;
 
     // Animate moons
     moons.forEach((moon) => {
