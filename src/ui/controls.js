@@ -6,9 +6,11 @@ import * as THREE from 'three';
 import { BODY_INFO } from '../data/planets.js';
 
 // ── State ──
-export let speedMultiplier = 2;
+export let speedMultiplier = 0.25;
+export let speedMode = 'artistic'; // 'artistic' | 'realtime'
 
 export function setSpeedMultiplier(v) { speedMultiplier = v; }
+export function setSpeedMode(m) { speedMode = m; }
 
 /**
  * Wire up all UI event listeners.
@@ -18,6 +20,7 @@ export function setupUI({ focusBodyFn, resetCameraFn, setSimDateFn, toggleOrbits
   // Speed buttons
   document.querySelectorAll('[data-speed]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      speedMode = 'artistic';
       speedMultiplier = parseFloat(btn.dataset.speed);
       document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
@@ -128,13 +131,12 @@ export function updateSimClock(simDate) {
   const el = document.getElementById('sim-time');
   if (!el) return;
 
-  if (speedMultiplier === 0) {
+  if (speedMode === 'artistic' && speedMultiplier === 0) {
     el.textContent = 'Paused';
     return;
   }
 
   const opts = { year: 'numeric', month: 'short', day: 'numeric' };
   const dateStr = simDate.toLocaleDateString('en-US', opts);
-  const label = speedMultiplier <= 1 ? 'Gentle' : speedMultiplier <= 5 ? 'Normal' : speedMultiplier <= 15 ? 'Brisk' : 'Fast';
-  el.textContent = `${dateStr}  · ${label}`;
+  el.textContent = dateStr;
 }

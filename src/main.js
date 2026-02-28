@@ -13,15 +13,16 @@ import { PLANETS } from './data/planets.js';
 import { getAllPositions } from './physics/ephemeris.js';
 import {
   createStarField, createSun, createPlanet, createAsteroidBelt, clickableMeshes,
-  orbitLines, createMilkyWay, createSocialBeacons, socialBeacons, createNavHint,
+  orbitLines, createMilkyWay, createNavHint, loadingManager,
 } from './objects/factories.js';
 import {
   smoothCameraTo, updateCamera, DEFAULT_CAM_POS, DEFAULT_CAM_TARGET,
 } from './camera/cameraManager.js';
 import {
   setupUI, showInfoPanel, hideInfoPanel, updateSimClock,
-  speedMultiplier,
+  speedMultiplier, speedMode,
 } from './ui/controls.js';
+import { startAmbient, playClick, playWhoosh, toggleMute, isMuted } from './audio/soundManager.js';
 
 // ============================================================================
 // GLOBALS
@@ -34,7 +35,6 @@ let asteroidBelt;
 let lockedTarget = null;
 let navHint = null;
 let navHintVisible = true;
-let sceneReady = false; // true after all assets are loaded
 
 // Simulation date — starts at NOW, advanced by speed each frame
 let simDate = new Date();
@@ -51,32 +51,26 @@ init();
 function init() {
   clock = new THREE.Clock();
 
+  // ── Loading screen hooks ──
+  const loadingBar = document.getElementById('loading-bar');
+  const loadingText = document.getElementById('loading-text');
+  const loadingScreen = document.getElementById('loading-screen');
+
+  loadingManager.onProgress = (_url, loaded, total) => {
+    const pct = Math.round((loaded / total) * 100);
+    if (loadingBar) loadingBar.style.width = pct + '%';
+    if (loadingText) loadingText.textContent = `Loading textures… ${pct}%`;
+  };
+  loadingManager.onLoad = () => {
+    if (loadingScreen) {
+      loadingScreen.classList.add('fade-out');
+      setTimeout(() => { loadingScreen.remove(); }, 1400);
+    }
+  };
+
   // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000008);
-
-  // Loading manager — drives progress bar + fade-in
-  const loadingOverlay = document.getElementById('loading-overlay');
-  const loadingBar = document.getElementById('loading-bar');
-  const loadingPct = document.getElementById('loading-pct');
-  THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => {
-    const pct = Math.round((loaded / total) * 100);
-    if (loadingBar) loadingBar.style.width = pct + '%';
-    if (loadingPct) loadingPct.textContent = pct + '%';
-  };
-  THREE.DefaultLoadingManager.onLoad = () => {
-    sceneReady = true;
-    // Smooth fade out loading screen
-    if (loadingOverlay) {
-      loadingOverlay.style.opacity = '0';
-      setTimeout(() => { loadingOverlay.style.display = 'none'; }, 900);
-    }
-    // Fade in UI
-    const ui = document.getElementById('ui');
-    const hint = document.getElementById('hint');
-    if (ui) { ui.style.opacity = '1'; }
-    if (hint) { hint.style.opacity = '1'; }
-  };
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -99,7 +93,7 @@ function init() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 1;
+  controls.minDistance = 5;
   controls.maxDistance = 500;
   controls.enablePan = true;
 
@@ -120,7 +114,6 @@ function init() {
     planetObjects.push(createPlanet(scene, data));
   });
   asteroidBelt = createAsteroidBelt(scene);
-  createSocialBeacons(scene);
   navHint = createNavHint(scene);
 
   // Set real initial positions from ephemeris
@@ -128,6 +121,16 @@ function init() {
 
   // UI
   setupUI({ focusBodyFn: focusBodyByName, resetCameraFn: resetCamera, setSimDateFn: setSimDate, toggleOrbitsFn: toggleOrbits });
+
+  // Sound mute button
+  const muteBtn = document.getElementById('btn-mute');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      const muted = toggleMute();
+      muteBtn.textContent = muted ? '🔇 Sound' : '🔊 Sound';
+      muteBtn.classList.toggle('active', !muted);
+    });
+  }
 
   // Click
   renderer.domElement.addEventListener('click', onCanvasClick);
@@ -144,12 +147,10 @@ function init() {
 function applyEphemeris(date) {
   const positions = getAllPositions(date);
   planetObjects.forEach((p) => {
+    // Social link planets don't use ephemeris — they orbit at a slow constant speed
+    if (p.data.isSocialLink) return;
     const pos = positions.get(p.data.ephemerisName || p.data.name);
     if (pos) {
-      // Map ecliptic angle → orbit pivot rotation.
-      // In Three.js Y-up, rotation.y is around the Y axis (top-down = ecliptic)
-      // JPL angle is counter-clockwise in ecliptic, Three.js rotation.y is CW from +X toward -Z,
-      // so we negate.
       p.orbitPivot.rotation.y = -pos.angle;
     }
   });
@@ -166,21 +167,24 @@ function onCanvasClick(event) {
 
   raycaster.setFromCamera(mouse, camera);
 
-  // Check social beacons first
-  const beaconHits = raycaster.intersectObjects(socialBeacons, false);
-  if (beaconHits.length > 0 && beaconHits[0].object.userData.url) {
-    window.open(beaconHits[0].object.userData.url, '_blank');
-    return;
-  }
-
   const hits = raycaster.intersectObjects(Array.from(clickableMeshes.keys()), false);
 
   if (hits.length > 0) {
     const info = clickableMeshes.get(hits[0].object);
     if (info) {
+      // Social link planets open URL in new tab
+      if (info.url) {
+        playClick();
+        window.open(info.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      playWhoosh();
       focusBodyByName(info.name);
       fadeNavHint();
     }
+  } else {
+    // First click anywhere starts ambient audio (browser autoplay policy)
+    startAmbient();
   }
 }
 
@@ -201,9 +205,8 @@ function onCanvasHover(event) {
   _hoverMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   _hoverMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(_hoverMouse, camera);
-  const beaconHits = raycaster.intersectObjects(socialBeacons, false);
   const planetHits = raycaster.intersectObjects(Array.from(clickableMeshes.keys()), false);
-  renderer.domElement.style.cursor = (beaconHits.length > 0 || planetHits.length > 0) ? 'pointer' : '';
+  renderer.domElement.style.cursor = planetHits.length > 0 ? 'pointer' : '';
 }
 
 // ============================================================================
@@ -217,30 +220,21 @@ function focusBodyByName(name) {
     radius = 4;
     color = 0xffdd44;
   } else {
-    // Check planets first
     const p = planetObjects.find((p) => p.data.name === name);
-    if (p) {
-      mesh = p.mesh;
-      radius = p.data.radius;
-      color = p.data.color;
-    } else {
-      // Check moons
-      for (const planet of planetObjects) {
-        const moon = planet.moons.find((m) => m.data.name === name);
-        if (moon) {
-          mesh = moon.mesh;
-          radius = moon.data.radius;
-          color = moon.data.color;
-          break;
-        }
-      }
-      if (!mesh) return;
+    if (!p) return;
+    // Social link planets — open their URL directly
+    if (p.data.isSocialLink && p.data.url) {
+      window.open(p.data.url, '_blank', 'noopener,noreferrer');
+      return;
     }
+    mesh = p.mesh;
+    radius = p.data.radius;
+    color = p.data.color;
   }
 
   const worldPos = new THREE.Vector3();
   mesh.getWorldPosition(worldPos);
-  const zoomDist = radius * 4 + 2;
+  const zoomDist = radius * 7 + 5;
 
   lockedTarget = mesh;
   smoothCameraTo(mesh, worldPos, zoomDist, camera, controls);
@@ -271,28 +265,47 @@ function animate() {
   const delta = clock.getDelta(); // seconds since last frame
 
   // Advance simulated date
-  // speedMultiplier is directly days-per-second (e.g. 2 = 2 Earth days per real second)
-  const daysPerSec = speedMultiplier;
-  simDate = new Date(simDate.getTime() + delta * daysPerSec * 86400000);
+  if (speedMode === 'realtime') {
+    // Real-time: 1 real second = 1 second of actual planetary motion
+    simDate = new Date(simDate.getTime() + delta * 1000);
+  } else {
+    // Artistic: 1× → 2 Earth-days per real second (gentle drift)
+    const daysPerSec = speedMultiplier * 2;
+    simDate = new Date(simDate.getTime() + delta * daysPerSec * 86400000);
+  }
 
   // Recompute planet angles from ephemeris
   applyEphemeris(simDate);
 
   // Axial rotation (visual only, independent of ephemeris)
-  // Cap visual rotation speed so planets don't spin crazily
-  const maxVisualRadPerSec = 0.5; // cap visual spin speed
+  // rotationPeriod is in Earth days; angular vel = 2π / |period| rad/day
   planetObjects.forEach((p) => {
     const period = p.data.rotationPeriod || 1;
     const radPerDay = (2 * Math.PI) / Math.abs(period);
     const sign = period < 0 ? -1 : 1;
-    const rawSpeed = radPerDay * daysPerSec;
-    const cappedSpeed = Math.min(rawSpeed, maxVisualRadPerSec);
-    p.mesh.rotation.y += sign * cappedSpeed * delta;
+    if (speedMode === 'realtime') {
+      p.mesh.rotation.y += sign * radPerDay * (delta / 86400);
+    } else {
+      // Artistic: speedMultiplier * 2 sim-days per real sec
+      p.mesh.rotation.y += sign * radPerDay * speedMultiplier * 2 * delta;
+    }
     // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
       const moonRadPerDay = (2 * Math.PI) / m.data.orbitalPeriod;
-      m.pivot.rotation.y += moonRadPerDay * daysPerSec * delta;
+      if (speedMode === 'realtime') {
+        m.pivot.rotation.y += moonRadPerDay * (delta / 86400);
+      } else {
+        m.pivot.rotation.y += moonRadPerDay * speedMultiplier * 2 * delta;
+      }
     });
+  });
+
+  // Social link planets — gentle constant orbit (no ephemeris)
+  planetObjects.forEach((p) => {
+    if (!p.data.isSocialLink) return;
+    const orbitSpeed = (2 * Math.PI) / p.data.orbitalPeriod;
+    p.orbitPivot.rotation.y += orbitSpeed * speedMultiplier * 2 * delta * 86400;
+    p.mesh.rotation.y += 0.1 * delta;
   });
 
   // Sun
@@ -303,7 +316,7 @@ function animate() {
 
   // Asteroid belt slow rotation
   if (asteroidBelt) {
-    asteroidBelt.rotation.y += 0.02 * delta * Math.max(1, speedMultiplier);
+    asteroidBelt.rotation.y += 0.02 * delta * (speedMode === 'realtime' ? 1 : speedMultiplier * 0.5);
   }
 
   // Nav hint pulsing rings
@@ -315,18 +328,6 @@ function animate() {
     navHint.ring2.material.opacity = p2;
     navHint.ring.scale.setScalar(1 + Math.sin(t * 0.8) * 0.05);
     navHint.ring2.scale.setScalar(1 + Math.sin(t * 0.6 + 2) * 0.04);
-  }
-
-  // Social satellite orbits
-  if (socialBeacons._orbits) {
-    socialBeacons._orbits.forEach((s) => {
-      const radPerDay = (2 * Math.PI) / s.data.orbitalPeriod;
-      s.pivot.rotation.y += radPerDay * daysPerSec * delta;
-      // Gentle glow pulse
-      const t = clock.elapsedTime;
-      const pulse = 0.12 + Math.sin(t * 1.5 + s.data.distance) * 0.05;
-      s.glowMesh.material.opacity = pulse;
-    });
   }
 
   // Camera

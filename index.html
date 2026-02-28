@@ -3,58 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Abhay Sharma · Portfolio System</title>
-    <meta name="description" content="Abhay Sharma — Interactive 3D portfolio. Explore my professional universe." />
+    <title>Abhay's System · Portfolio</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { overflow: hidden; background: #000; font-family: 'Segoe UI', system-ui, sans-serif; }
-
-      /* ── Loading Overlay ── */
-      #loading-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 100;
-        background: #000008;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        transition: opacity 0.9s ease;
-      }
-      #loading-overlay .loading-title {
-        font-size: 22px;
-        font-weight: 600;
-        color: #fff;
-        margin-bottom: 6px;
-        text-shadow: 0 0 18px rgba(255,200,50,0.4);
-        letter-spacing: 2px;
-      }
-      #loading-overlay .loading-sub {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 28px;
-        letter-spacing: 1px;
-      }
-      #loading-track {
-        width: 220px;
-        height: 3px;
-        background: rgba(255,255,255,0.08);
-        border-radius: 2px;
-        overflow: hidden;
-        margin-bottom: 10px;
-      }
-      #loading-bar {
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(90deg, #ffdd44, #ffaa22);
-        border-radius: 2px;
-        transition: width 0.3s ease;
-      }
-      #loading-pct {
-        font-size: 11px;
-        color: #665;
-        font-variant-numeric: tabular-nums;
-      }
 
       /* ── UI Overlay ── */
       #ui {
@@ -64,8 +16,6 @@
         z-index: 10;
         color: #ccc;
         user-select: none;
-        opacity: 0;
-        transition: opacity 0.8s ease 0.2s;
       }
       #ui h1 {
         font-size: 18px;
@@ -315,23 +265,79 @@
         pointer-events: none;
         letter-spacing: 2px;
         text-transform: lowercase;
-        opacity: 0;
-        transition: opacity 0.8s ease 0.4s;
         animation: hintPulse 4s ease-in-out infinite;
       }
       @keyframes hintPulse {
         0%, 100% { opacity: 0.5; }
         50% { opacity: 1; }
       }
+
+      /* ── Loading Screen ── */
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: radial-gradient(ellipse at center, #0a0a1a 0%, #000004 70%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 1.2s ease;
+      }
+      #loading-screen.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #loading-screen h2 {
+        color: #fff;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        margin-bottom: 28px;
+        text-shadow: 0 0 20px rgba(255,200,50,0.4);
+      }
+      #loading-screen .loader-ring {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(255,255,255,0.06);
+        border-top-color: rgba(255,200,50,0.7);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      #loading-bar-wrap {
+        width: 220px;
+        height: 3px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #loading-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(255,200,50,0.8), rgba(255,150,30,0.6));
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+      #loading-text {
+        margin-top: 14px;
+        font-size: 10px;
+        color: rgba(255,255,255,0.3);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
     </style>
   </head>
   <body>
-    <!-- Loading Overlay -->
-    <div id="loading-overlay">
-      <div class="loading-title">☄ Abhay's System</div>
-      <div class="loading-sub">Initializing the universe…</div>
-      <div id="loading-track"><div id="loading-bar"></div></div>
-      <div id="loading-pct">0%</div>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loader-ring"></div>
+      <h2>☀ Abhay's System</h2>
+      <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+      <div id="loading-text">Loading textures…</div>
     </div>
 
     <!-- UI Overlay -->
@@ -341,13 +347,14 @@
 
       <!-- Speed Controls -->
       <div class="control-group">
-        <label>Simulation Speed</label>
+        <label>Time Flow</label>
         <div class="btn-row">
           <button class="btn" data-speed="0">⏸ Pause</button>
-          <button class="btn" data-speed="1">Gentle</button>
-          <button class="btn active" data-speed="2">Normal</button>
-          <button class="btn" data-speed="8">Brisk</button>
-          <button class="btn" data-speed="25">Fast</button>
+          <button class="btn active" data-speed="0.25">Slow</button>
+          <button class="btn" data-speed="1">1×</button>
+          <button class="btn" data-speed="3">3×</button>
+          <button class="btn" data-speed="8">Fast</button>
+          <button class="btn" data-speed="20">Warp</button>
         </div>
         <div id="sim-badge"><span id="sim-time">Loading…</span></div>
       </div>
@@ -386,10 +393,21 @@
         </div>
       </div>
 
+      <!-- Social Links -->
+      <div class="control-group">
+        <label>Connect</label>
+        <div class="planet-grid">
+          <button class="planet-btn" data-planet="GitHub"><span class="dot" style="background:#c9d1d9"></span>GitHub</button>
+          <button class="planet-btn" data-planet="LinkedIn"><span class="dot" style="background:#0a66c2"></span>LinkedIn</button>
+          <button class="planet-btn" data-planet="Email"><span class="dot" style="background:#44ddaa"></span>Email</button>
+        </div>
+      </div>
+
       <!-- Reset Camera -->
       <div class="btn-row" style="margin-top: 6px;">
         <button id="btn-orbits" class="btn active" style="flex:1">⊙ Orbits</button>
-        <button id="btn-reset" style="flex:1">↺ Reset Camera</button>
+        <button id="btn-mute" class="btn active" style="flex:1">🔊 Sound</button>
+        <button id="btn-reset" style="flex:1">↺ Reset</button>
       </div>
     </div>
 

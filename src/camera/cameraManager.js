@@ -63,7 +63,12 @@ export function updateCamera(camera, controls, lockedTarget) {
       endPos = explicitEndPos;
     } else {
       // Position camera at an offset from the live target
-      const dir = new THREE.Vector3().subVectors(startPos, startTarget).normalize();
+      const dir = new THREE.Vector3().subVectors(startPos, startTarget);
+      if (dir.lengthSq() < 0.001) {
+        // Camera is too close to target — use a sensible default direction
+        dir.set(1, 0.6, 1);
+      }
+      dir.normalize();
       endPos = liveTarget.clone().add(dir.multiplyScalar(zoomDist));
       endPos.y = Math.max(endPos.y, zoomDist * 0.3);
     }
@@ -82,11 +87,13 @@ export function updateCamera(camera, controls, lockedTarget) {
   if (lockedTarget) {
     const wp = new THREE.Vector3();
     lockedTarget.getWorldPosition(wp);
-    controls.target.lerp(wp, 0.25);
-    // Keep camera following at same relative distance
+    // Compute current offset BEFORE moving anything
     const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
-    camera.position.copy(wp).add(offset);
-    camera.position.lerp(wp.clone().add(offset), 0.15);
+    // Smoothly move target toward world position
+    controls.target.lerp(wp, 0.25);
+    // Move camera to maintain the offset from the updated target
+    const desiredCamPos = controls.target.clone().add(offset);
+    camera.position.lerp(desiredCamPos, 0.25);
   }
   return false;
 }
