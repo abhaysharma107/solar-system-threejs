@@ -265,12 +265,13 @@
         <label>Simulation Speed</label>
         <div class="btn-row">
           <button class="btn" data-speed="0">⏸ Pause</button>
+          <button id="btn-realtime" class="btn">⏱ Real</button>
           <button class="btn" data-speed="0.25">¼×</button>
           <button class="btn active" data-speed="1">1×</button>
           <button class="btn" data-speed="3">3×</button>
           <button class="btn" data-speed="10">10×</button>
         </div>
-        <div id="sim-badge"><span>⏱</span><span id="sim-time">Y0 · D0</span></div>
+        <div id="sim-badge"><span id="sim-time">Loading…</span></div>
       </div>
 
       <!-- Navigate to Planets -->
@@ -302,6 +303,6 @@
       <kbd>Click</kbd> planet to explore · <kbd>Scroll</kbd> zoom · <kbd>Drag</kbd> orbit
     </div>
 
-    <script type="module" src="/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
