@@ -287,6 +287,8 @@ function animate() {
 
   // Axial rotation (visual only, independent of ephemeris)
   // rotationPeriod is in Earth days; angular vel = 2π / |period| rad/day
+  // AXIAL_ROTATION_SCALE dampens visual spin so fast-period planets (Jupiter 0.4d) aren't a blur
+  const AXIAL_ROTATION_SCALE = 0.05;
   planetObjects.forEach((p) => {
     const period = p.data.rotationPeriod || 1;
     const radPerDay = (2 * Math.PI) / Math.abs(period);
@@ -294,8 +296,8 @@ function animate() {
     if (speedMode === 'realtime') {
       p.mesh.rotation.y += sign * radPerDay * (delta / 86400);
     } else {
-      // Artistic: speedMultiplier * 2 sim-days per real sec
-      p.mesh.rotation.y += sign * radPerDay * speedMultiplier * 2 * delta;
+      // Artistic: speedMultiplier * 2 sim-days per real sec, dampened by scale
+      p.mesh.rotation.y += sign * radPerDay * speedMultiplier * 2 * delta * AXIAL_ROTATION_SCALE;
     }
     // Moons — angular velocity = 2π / orbitalPeriod (rad per day)
     p.moons.forEach((m) => {
